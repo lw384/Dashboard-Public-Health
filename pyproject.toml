@@ -1,0 +1,27 @@
+[project]
+name = "dashboard-public-health"
+version = "0.1.0"
+description = "A Python-based tool for loading, cleaning, filtering and visualising public health data."
+authors = [
+    {name = "lw384",email = "15651756926@163.com"}
+]
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+ "pandas>=2.3"
+]
+
+[project.scripts]
+start = "dashboard_public_health.__main__:main"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.1,<10.0.0)",
+    "black (>=25.11.0,<26.0.0)",
+    "ruff (>=0.14.5,<0.15.0)"
+]
