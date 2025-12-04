@@ -17,8 +17,12 @@ dependencies = [
   "psycopg[binary,pool] (>=3.2.12,<4.0.0)",
 ]
 
+packages = [
+    { include = "public_health_insights", from = "src" }
+]
+
 [project.scripts]
-start = "dashboard_public_health.__main__:main"
+start = "dashboard_public_health.ui.cli:run_cli"
 
 
 [build-system]
