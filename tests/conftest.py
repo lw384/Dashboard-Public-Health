@@ -6,8 +6,8 @@ from dashboard_public_health import config
 
 
 @pytest.fixture
-def sample_csv_path(project_root: Path) -> Path:
-    return project_root / "tests" / "data" / "sample_public_health.csv"
+def sample_csv_path(project_root=config.PROJECT_ROOT) -> Path:
+    return project_root / "tests" / "data" / "sample_data.csv"
 
 
 @pytest.fixture
