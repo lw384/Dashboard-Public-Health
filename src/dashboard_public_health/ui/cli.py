@@ -1,5 +1,9 @@
 # ui/cli.py
 from dashboard_public_health.application.exploration_service import filter_and_summarise
+from dashboard_public_health.application.ingestion_service import ingest_from_csv
+from pathlib import Path
+
+from dashboard_public_health.config import DEFAULT_CSV
 
 
 def run_cli():
@@ -10,7 +14,7 @@ def run_cli():
         choice = input("请选择: ")
 
         if choice == "1":
-            ...
+            ingest_from_csv(DEFAULT_CSV)
         elif choice == "2":
             country = input("国家（可留空）: ").strip() or None
             start = input("起始年份（可留空）: ").strip()

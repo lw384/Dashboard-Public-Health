@@ -1,4 +1,4 @@
-from dashboard_public_health.infrastructure.sqlite_repository import fetch_all_records
+from dashboard_public_health.infrastructure.db import fetch_all_records
 from dashboard_public_health.domain.models import FilterCriteria
 from dashboard_public_health.domain.rules import (
     apply_filter,

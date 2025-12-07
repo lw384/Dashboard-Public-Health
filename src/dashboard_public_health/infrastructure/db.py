@@ -3,14 +3,14 @@ import sqlite3
 from typing import Iterable
 from dashboard_public_health.domain.models import Record
 
-DB_PATH = "data/public_health.db"
+from dashboard_public_health.config import DB_PATH
 
 
 def get_conn():
     return sqlite3.connect(DB_PATH)
 
 
-def init_db():
+def init_db_schema():
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
@@ -28,7 +28,7 @@ def init_db():
     conn.close()
 
 
-def save_records(records: Iterable[Record]):
+def insert_records(records: Iterable[Record]):
     conn = get_conn()
     cur = conn.cursor()
     cur.executemany(

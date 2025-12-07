@@ -1,20 +1,33 @@
 # application/ingestion_service.py
-from infrastructure.csv_reader import read_csv
-from domain.rules import from_row
-from infrastructure.csv_reader import read_csv
-from infrastructure.sqlite_repository import init_db, save_records
-from domain.rules import from_row
+from dashboard_public_health.infrastructure.csv_reader import load_csv
+from dashboard_public_health.infrastructure.db import (
+    get_conn,
+    init_db_schema,
+    insert_records,
+)
 
 
-def load_dataset_from_csv(path: str):
-    df = read_csv(path)
-    records = [from_row(row) for _, row in df.iterrows()]
-    return records
+def ingest_from_csv(csv_path: str) -> None:
+    """
+    High-level function: CSV -> cleaned DataFrame -> DB
+    """
+    print(f"[ingestion] Starting ingestion from: {csv_path}")
 
+    # 1. 读原始数据
+    raw_df = load_csv(csv_path)
 
-def load_and_persist_from_csv(path: str) -> int:
-    init_db()
-    df = read_csv(path)
-    records = [from_row(row) for _, row in df.iterrows()]
-    save_records(records)
-    return len(records)
+    # # 2. 清洗 + 类型转换
+    # cleaned_df = clean_dataframe(raw_df)
+
+    # # 3. 转成 records
+    # records = dataframe_to_records(cleaned_df)
+
+    # 4. 建立数据库连接并初始化 schema
+    conn = get_conn()
+    init_db_schema()
+
+    # 5. 插入数据（避免重复）
+    insert_records(raw_df)
+
+    conn.close()
+    print("[ingestion] Ingestion completed.")
