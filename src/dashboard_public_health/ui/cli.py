@@ -2,6 +2,7 @@
 from dashboard_public_health.application.ingestion_service import ingest_from_csv
 from dashboard_public_health.application.query_service import (
     filter_records_with_connection,
+    summarise_filtered_data,
 )
 from dashboard_public_health.config import DEFAULT_CSV
 

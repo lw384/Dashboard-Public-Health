@@ -6,7 +6,10 @@ from dashboard_public_health.infrastructure.db import (
     init_db_schema,
     insert_records,
 )
-from dashboard_public_health.application.query_service import filter_records
+from dashboard_public_health.application.query_service import (
+    filter_records,
+    summarise_df,
+)
 
 
 def _seed_sample_data(conn):
@@ -120,3 +123,27 @@ def test_filter_records_by_age_group_and_indicator(temp_db_path):
     assert set(df_18_49_cases["indicator"]) == {"daily_new_cases"}
 
     conn.close()
+
+
+def test_summary_basic():
+    df = pd.DataFrame(
+        {"date": ["2020-01-01", "2020-01-02", "2020-01-03"], "value": [10, 20, 30]}
+    )
+
+    summary = summarise_df(df)
+
+    assert summary["record_count"] == 3
+    assert summary["min_value"] == 10
+    assert summary["max_value"] == 30
+    assert summary["mean_value"] == 20.0
+    assert summary["start_date"] == "2020-01-01"
+    assert summary["end_date"] == "2020-01-03"
+
+
+def test_summary_empty_df():
+    df = pd.DataFrame(columns=["date", "value"])
+    summary = summarise_df(df)
+
+    assert summary["record_count"] == 0
+    assert summary["min_value"] is None
+    assert summary["max_value"] is None

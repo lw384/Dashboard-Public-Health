@@ -107,3 +107,61 @@ def filter_records_with_connection(
         conn.close()
 
     return df
+
+
+def summarise_df(df: pd.DataFrame) -> dict:
+    """
+    Compute basic summary statistics on a filtered DataFrame.
+
+    Returns:
+        A dictionary with:
+            - record_count
+            - min_value
+            - max_value
+            - mean_value
+            - start_date
+            - end_date
+    """
+    if df.empty:
+        return {
+            "record_count": 0,
+            "min_value": None,
+            "max_value": None,
+            "mean_value": None,
+            "start_date": None,
+            "end_date": None,
+        }
+
+    return {
+        "record_count": len(df),
+        "min_value": df["value"].min(),
+        "max_value": df["value"].max(),
+        "mean_value": round(df["value"].mean(), 2),
+        "start_date": df["date"].min(),
+        "end_date": df["date"].max(),
+    }
+
+
+def summarise_filtered_data(
+    *,
+    country=None,
+    start_date=None,
+    end_date=None,
+    age_group=None,
+    indicator=None,
+):
+    conn = get_conn()
+
+    try:
+        df = filter_records(
+            conn,
+            country=country,
+            start_date=start_date,
+            end_date=end_date,
+            age_group=age_group,
+            indicator=indicator,
+        )
+    finally:
+        conn.close()
+
+    return summarise_df(df)
