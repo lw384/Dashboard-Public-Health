@@ -1,61 +1,52 @@
-# src/dashboard_public_health/application/visualization_service.py
-
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
 
-from dashboard_public_health.infrastructure.logger import log_action
 
+def plot_descriptive(df):
+    numeric = df.select_dtypes(include="number")
+    desc = numeric.describe().T  # rows = features
 
-@log_action
-def plot_trend(df: pd.DataFrame, output_path="trend.png"):
-    """
-    Plot a time-series trend line chart from the filtered DataFrame.
-
-    The DataFrame must contain 'date' and 'value' columns.
-    """
-    if df.empty:
-        print("[visualization] No data to plot.")
-        return None
-
-    # Group by date (in case multiple rows per date)
-    trend = df.groupby("date")["value"].mean()
-
-    plt.figure(figsize=(10, 5))
-    trend.plot(kind="line")
-
-    plt.title("Trend over time")
-    plt.xlabel("Date")
-    plt.ylabel("Value")
-    plt.xticks(rotation=45)
+    plt.figure(figsize=(10, 4))
+    desc["mean"].plot(kind="bar")
+    plt.title("Mean Values of Numeric Features")
+    plt.ylabel("Mean")
     plt.tight_layout()
-    plt.savefig(output_path)
-
-    print(f"[visualization] Trend chart saved to {output_path}")
-    return output_path
+    plt.show()
 
 
-@log_action
-def plot_grouped_bar(
-    df: pd.DataFrame, group_col="country", output_path="grouped_bar.png"
-):
-    """
-    Plot a bar chart showing average value grouped by country or age_group.
-    """
-
-    if group_col not in df.columns:
-        print(f"[visualization] Column '{group_col}' not found.")
-        return None
-
-    grouped = df.groupby(group_col)["value"].mean().sort_values()
-
-    plt.figure(figsize=(10, 5))
-    grouped.plot(kind="bar")
-
-    plt.title(f"Average Value by {group_col.capitalize()}")
-    plt.xlabel(group_col.capitalize())
-    plt.ylabel("Average Value")
+def plot_time_trends(df):
+    trend = df.groupby("year")[
+        ["prevalence_rate", "incidence_rate", "mortality_rate"]
+    ].mean()
+    plt.figure(figsize=(10, 4))
+    for col in trend.columns:
+        plt.plot(trend.index, trend[col], label=col)
+    plt.legend()
+    plt.xlabel("Year")
+    plt.ylabel("Rate")
+    plt.title("Trends Over Time")
     plt.tight_layout()
-    plt.savefig(output_path)
+    plt.show()
 
-    print(f"[visualization] Grouped bar chart saved to {output_path}")
-    return output_path
+
+def plot_grouped(df, col):
+    grouped = df.groupby(col)[
+        ["prevalence_rate", "incidence_rate", "mortality_rate"]
+    ].mean()
+    grouped.plot(kind="bar", figsize=(12, 5))
+    plt.title(f"Grouped Stats by {col}")
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_corr(df):
+    numeric = df.select_dtypes(include="number")
+    corr = numeric.corr()
+    plt.figure(figsize=(10, 8))
+    plt.imshow(corr, cmap="coolwarm")
+    plt.colorbar()
+    plt.xticks(range(len(corr.columns)), corr.columns, rotation=45)
+    plt.yticks(range(len(corr.columns)), corr.columns)
+    plt.title("Correlation Heatmap")
+    plt.tight_layout()
+    plt.show()

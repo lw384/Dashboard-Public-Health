@@ -1,6 +1,7 @@
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 import pandas as pd
 from dashboard_public_health.infrastructure.db import get_conn
+from dashboard_public_health.infrastructure.logger import log_action
 
 
 def build_where_clause(filters: Dict[str, Any]):
@@ -62,6 +63,7 @@ def build_where_clause(filters: Dict[str, Any]):
     return where, params
 
 
+@log_action
 def filter_records_with_connection(**filters) -> pd.DataFrame:
     """
     Execute dynamic SQL query based on provided filters.

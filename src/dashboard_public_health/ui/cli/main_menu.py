@@ -3,7 +3,6 @@
 from dashboard_public_health.ui.cli.router import Menu
 from dashboard_public_health.ui.cli.filter_menu import FilterMenu
 from dashboard_public_health.ui.cli.summary_menu import SummaryMenu
-from dashboard_public_health.ui.cli.visualize_menu import VisualizationMenu
 from dashboard_public_health.ui.cli.export_menu import ExportMenu
 from dashboard_public_health.application.ingestion_service import ingest_from_csv
 from dashboard_public_health.application.logger_service import read_last_logs
@@ -17,10 +16,6 @@ class MainMenu(Menu):
             "1": {"label": "Ingest data from CSV", "handler": self.ingest_data},
             "2": {"label": "Filter data", "handler": self.open_filter_menu},
             "3": {"label": "Summary analysis", "handler": self.open_summary_menu},
-            # "4": {
-            #     "label": "Visualize results",
-            #     "handler": self.open_visualization_menu
-            # },
             # "5": {
             #     "label": "Export results",
             #     "handler": self.open_export_menu

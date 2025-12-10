@@ -22,6 +22,7 @@ import pandas as pd
 import numpy as np
 from dashboard_public_health.application.provenance import with_provenance
 from dashboard_public_health.application.auto_mapper import auto_match_columns
+from dashboard_public_health.infrastructure.logger import log_action
 
 
 # ============================================================
@@ -51,6 +52,7 @@ def _normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
 # ============================================================
 
 
+@log_action
 def map_raw_to_internal_schema(
     df_raw: pd.DataFrame, *, source_name: str = "health_csv"
 ) -> pd.DataFrame:
@@ -311,6 +313,7 @@ def _deduplicate(df: pd.DataFrame) -> pd.DataFrame:
 # ============================================================
 
 
+@log_action
 def transform_raw_health_csv(
     df_raw: pd.DataFrame, *, source_name: str = "health_csv"
 ) -> pd.DataFrame:

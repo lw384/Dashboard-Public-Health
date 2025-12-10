@@ -11,6 +11,12 @@ from dashboard_public_health.application.query_service import (
     filter_records_with_connection,
 )
 from dashboard_public_health.ui.cli.helpers import ask_filter_inputs
+from dashboard_public_health.application.visualization_service import (
+    plot_descriptive,
+    plot_time_trends,
+    plot_grouped,
+    plot_corr,
+)
 
 
 class SummaryMenu(Menu):
@@ -53,6 +59,7 @@ class SummaryMenu(Menu):
         summary = descriptive_summary(df)
         print("\n=== Descriptive Summary ===\n")
         print(summary)
+        plot_descriptive(df)
         input("\nPress Enter to continue...")
 
     # ---------- Option 2 ----------
@@ -63,19 +70,22 @@ class SummaryMenu(Menu):
         summary = time_trend_summary(df)
         print("\n=== Time Trends ===\n")
         print(summary)
+        plot_time_trends(df)
         input("\nPress Enter to continue...")
 
     # ---------- Option 3 ----------
     def show_grouped_stats(self):
+        print("\n=== Grouped Statistics ===")
         df = self._load_filtered_df()
         if df is None:
             return
 
-        group_col = input("Group by (country/disease/age_group/gender): ").strip()
-        summary = grouped_summary(df, group_col)
+        # Ask user which column to group by
+        col = input("Group by which column? (disease/country/age_group/etc.): ").strip()
 
-        print("\n=== Grouped Statistics ===\n")
-        print(summary)
+        print(grouped_summary(df, col))
+        plot_grouped(df, col)
+
         input("\nPress Enter to continue...")
 
     # ---------- Option 4 ----------
@@ -87,6 +97,7 @@ class SummaryMenu(Menu):
         summary = correlation_summary(df)
         print("\n=== Correlation Analysis ===\n")
         print(summary)
+        plot_corr(df)
         input("\nPress Enter to continue...")
 
     def exit_menu(self):
