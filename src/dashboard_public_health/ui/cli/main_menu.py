@@ -14,13 +14,23 @@ from dashboard_public_health.config import DEFAULT_CSV
 class MainMenu(Menu):
     def __init__(self):
         options = {
-            "1": self.ingest_data,
-            "2": self.open_filter_menu,
-            # "3": self.open_summary_menu,
-            # "4": self.open_visualization_menu,
-            # "5": self.open_export_menu,
-            "6": self.show_logs,
-            "7": self.show_provenance,
+            "1": {"label": "Ingest data from CSV", "handler": self.ingest_data},
+            "2": {"label": "Filter data", "handler": self.open_filter_menu},
+            "3": {"label": "Summary analysis", "handler": self.open_summary_menu},
+            # "4": {
+            #     "label": "Visualize results",
+            #     "handler": self.open_visualization_menu
+            # },
+            # "5": {
+            #     "label": "Export results",
+            #     "handler": self.open_export_menu
+            # },
+            "6": {"label": "View log output", "handler": self.show_logs},
+            "7": {"label": "View cleaning provenance", "handler": self.show_provenance},
+            # "0": {
+            #     "label": "Back",
+            #     "handler": self.exit_menu
+            # },
         }
         super().__init__("Public Health Data Insights", options)
 

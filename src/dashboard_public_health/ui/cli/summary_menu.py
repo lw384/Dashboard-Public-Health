@@ -2,44 +2,53 @@
 
 from dashboard_public_health.ui.cli.router import Menu
 from dashboard_public_health.ui.cli.helpers import ask_filter_inputs
-
-# from dashboard_public_health.application.summary_service import (
-#     policy_summary,
-#     epidemiology_summary,
-#     ml_prep_summary,
-#     global_health_summary,
-# )
+from dashboard_public_health.application.summary_service import (
+    compute_summary,
+    format_summary_report,
+)
+from dashboard_public_health.application.query_service import (
+    filter_records_with_connection,
+)
 
 
 class SummaryMenu(Menu):
     def __init__(self):
         options = {
-            "1": self.policy,
-            "2": self.epidemiology,
-            "3": self.machine_learning,
-            "4": self.global_health,
+            "1": {
+                "label": "Healthcare Policy Summary",
+                "handler": lambda: self.run_summary("policy"),
+            },
+            "2": {
+                "label": "Epidemiology Summary",
+                "handler": lambda: self.run_summary("epidemiology"),
+            },
+            "3": {
+                "label": "Machine Learning Prep Summary",
+                "handler": lambda: self.run_summary("ml"),
+            },
+            "4": {
+                "label": "Global Health Summary",
+                "handler": lambda: self.run_summary("global"),
+            },
+            "0": {"label": "Back", "handler": self.exit_menu},
         }
-        super().__init__("Summary Statistics", options)
 
-    def _run_summary(self, func):
+        super().__init__("Summary Analysis", options)
+
+    def run_summary(self, mode: str):
+        print(f"\n=== Running {mode.capitalize()} Summary ===\n")
+
         filters = ask_filter_inputs()
-        summary = func(**filters)
-        print("\n=== Summary ===")
-        for k, v in summary.items():
-            print(f"{k}: {v}")
+        df = filter_records_with_connection(**filters)
 
-    def policy(self):
-        """Healthcare Policy Analysis"""
-        self._run_summary(policy_summary)
+        raw_summary = compute_summary(df, mode)
+        formatted = format_summary_report(raw_summary, mode)
 
-    def epidemiology(self):
-        """Epidemiological Studies"""
-        self._run_summary(epidemiology_summary)
+        print("\n=== SUMMARY RESULT ===\n")
+        print(formatted)
 
-    def machine_learning(self):
-        """Machine Learning Preparation"""
-        self._run_summary(ml_prep_summary)
+        input("\nPress Enter to continue...")
+        return False  # stay inside menu
 
-    def global_health(self):
-        """Global Health Research"""
-        self._run_summary(global_health_summary)
+    def exit_menu(self):
+        return True
