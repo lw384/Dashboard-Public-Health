@@ -1,167 +1,82 @@
-from __future__ import annotations
-from typing import Optional
+from typing import Dict, Any
 import pandas as pd
 from dashboard_public_health.infrastructure.db import get_conn
-from dashboard_public_health.infrastructure.db import fetch_all_records
-from dashboard_public_health.domain.models import FilterCriteria
-from dashboard_public_health.domain.analysis import (
-    calculate_summary,
-    group_by_country,
-)
-from dashboard_public_health.infrastructure.logger import log_action
 
 
-@log_action
-def filter_records(
-    conn,
-    *,
-    country: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    age_group: Optional[str] = None,
-    indicator: Optional[str] = None,
-) -> pd.DataFrame:
+def build_where_clause(filters: Dict[str, Any]):
     """
-    Query records from the 'record' table with optional filters.
-
-    Args:
-        conn: An open sqlite3.Connection.
-        country: Exact country match (e.g. 'Urban', 'UK').
-        start_date: Inclusive start date, format 'YYYY-MM-DD'.
-        end_date: Inclusive end date, format 'YYYY-MM-DD'.
-        age_group: Exact age group (e.g. '0-17', '18-49', 'Unknown').
-        indicator: Indicator name (e.g. 'daily_new_cases').
-
-    Returns:
-        A pandas DataFrame with columns:
-        [date, country, indicator, value, age_group, source_file]
-    """
-    where_clauses = []
-    params: list = []
-
-    if country:
-        where_clauses.append("country = ?")
-        params.append(country)
-
-    if start_date:
-        where_clauses.append("date >= ?")
-        params.append(start_date)
-
-    if end_date:
-        where_clauses.append("date <= ?")
-        params.append(end_date)
-
-    if age_group:
-        where_clauses.append("age_group = ?")
-        params.append(age_group)
-
-    if indicator:
-        where_clauses.append("indicator = ?")
-        params.append(indicator)
-
-    base_sql = """
-        SELECT
-            date,
-            country,
-            indicator,
-            value,
-            age_group,
-            source_file
-        FROM record
+    Convert Python filter parameters into a SQL WHERE clause + parameters.
+    Only adds conditions for filters that are not None.
     """
 
-    if where_clauses:
-        base_sql += " WHERE " + " AND ".join(where_clauses)
+    conditions = []
+    params = []
 
-    base_sql += " ORDER BY date;"
+    # Basic filters
+    if filters.get("country"):
+        conditions.append("country = ?")
+        params.append(filters["country"])
 
-    df = pd.read_sql_query(base_sql, conn, params=params)
+    if filters.get("disease"):
+        conditions.append("disease = ?")
+        params.append(filters["disease"])
 
-    return df
+    if filters.get("disease_category"):
+        conditions.append("disease_category = ?")
+        params.append(filters["disease_category"])
+
+    if filters.get("age_group"):
+        conditions.append("age_group = ?")
+        params.append(filters["age_group"])
+
+    if filters.get("gender"):
+        conditions.append("gender = ?")
+        params.append(filters["gender"])
+
+    # Year range
+    if filters.get("year_from"):
+        conditions.append("year >= ?")
+        params.append(filters["year_from"])
+
+    if filters.get("year_to"):
+        conditions.append("year <= ?")
+        params.append(filters["year_to"])
+
+    # Advanced filters: threshold-based
+    for adv_key, column in {
+        "min_urbanization_rate": "urbanization_rate",
+        "min_healthcare_access": "healthcare_access",
+        "min_hospital_beds": "hospital_beds_per_1000",
+        "min_income": "per_capita_income",
+        "min_education": "education_index",
+    }.items():
+        if filters.get(adv_key) is not None:
+            conditions.append(f"{column} >= ?")
+            params.append(filters[adv_key])
+
+    # Build final WHERE clause
+    where = " AND ".join(conditions)
+    if where:
+        where = "WHERE " + where
+
+    return where, params
 
 
-def filter_records_with_connection(
-    *,
-    country: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    age_group: Optional[str] = None,
-    indicator: Optional[str] = None,
-) -> pd.DataFrame:
+def filter_records_with_connection(**filters) -> pd.DataFrame:
     """
-    Convenience wrapper that opens/closes the DB connection internally.
-    Suitable for use from the CLI layer.
+    Execute dynamic SQL query based on provided filters.
+    Returns a DataFrame ready for summary/visualization.
     """
-    conn = get_conn()
-    try:
-        df = filter_records(
-            conn,
-            country=country,
-            start_date=start_date,
-            end_date=end_date,
-            age_group=age_group,
-            indicator=indicator,
-        )
-    finally:
-        conn.close()
 
-    return df
-
-
-@log_action
-def summarise_df(df: pd.DataFrame) -> dict:
-    """
-    Compute basic summary statistics on a filtered DataFrame.
-
-    Returns:
-        A dictionary with:
-            - record_count
-            - min_value
-            - max_value
-            - mean_value
-            - start_date
-            - end_date
-    """
-    if df.empty:
-        return {
-            "record_count": 0,
-            "min_value": None,
-            "max_value": None,
-            "mean_value": None,
-            "start_date": None,
-            "end_date": None,
-        }
-
-    return {
-        "record_count": len(df),
-        "min_value": df["value"].min(),
-        "max_value": df["value"].max(),
-        "mean_value": round(df["value"].mean(), 2),
-        "start_date": df["date"].min(),
-        "end_date": df["date"].max(),
-    }
-
-
-def summarise_filtered_data(
-    *,
-    country=None,
-    start_date=None,
-    end_date=None,
-    age_group=None,
-    indicator=None,
-):
     conn = get_conn()
 
-    try:
-        df = filter_records(
-            conn,
-            country=country,
-            start_date=start_date,
-            end_date=end_date,
-            age_group=age_group,
-            indicator=indicator,
-        )
-    finally:
-        conn.close()
+    where, params = build_where_clause(filters)
 
-    return summarise_df(df)
+    query = f"""
+        SELECT *
+        FROM records
+        {where}
+    """
+
+    df = pd.read_sql_query(query, conn, params=params)
+    return df
