@@ -6,6 +6,8 @@ from dashboard_public_health.infrastructure.db import (
     insert_records,
 )
 from dashboard_public_health.application.clean import transform_raw_health_csv
+from dashboard_public_health.infrastructure.logger import log_action
+from dashboard_public_health.infrastructure.logger import log_action
 
 
 def dataframe_to_records(df: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -16,6 +18,7 @@ def dataframe_to_records(df: pd.DataFrame) -> List[Dict[str, Any]]:
     return df.to_dict(orient="records")
 
 
+@log_action
 def ingest_from_csv(csv_path: str) -> None:
     """
     High-level function: CSV -> cleaned DataFrame -> DB

@@ -15,4 +15,4 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 DB_PATH = DATA_DIR / "public_health.db"
 
 # Default CSV for ingestion
-DEFAULT_CSV = RAW_DATA_DIR / "public_health_surveillance_dataset.csv"
+DEFAULT_CSV = RAW_DATA_DIR / "Global_Health_Statistics.csv"

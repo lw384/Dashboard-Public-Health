@@ -28,48 +28,24 @@ def raw_health_df() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-def test_map_raw_to_internal_schema_happy_path(raw_health_df: pd.DataFrame):
-    """
-    map_raw_to_internal_schema 应该：
-      - 规范列名后成功找到 age/location/daily_new_cases/date_of_data_collection
-      - 输出包含预期的内部列：age, country, value, date, indicator, age_group, source_file
-      - indicator 固定为 'daily_new_cases'
-      - country 使用 Location 的值
-      - age_group 按年龄分段
-      - source_file 使用传入的 source_name
-    """
-    df_internal = map_raw_to_internal_schema(raw_health_df, source_name="test_source")
-
-    # 列是否齐全
-    expected_cols = {
-        "age",
-        "country",
-        "value",
-        "date",
-        "indicator",
-        "age_group",
-        "source_file",
-    }
-    assert expected_cols.issubset(set(df_internal.columns))
-
-    # indicator 应该全部是 'daily_new_cases'
-    assert set(df_internal["indicator"]) == {"daily_new_cases"}
-
-    # country 源于 Location（注意去掉空格的 Urban）
-    assert (
-        "Urban" in df_internal["country"].values
-        or " Urban " in df_internal["country"].values
+def test_map_raw_to_internal_schema_automap(raw_health_df):
+    df = raw_health_df.rename(
+        columns={
+            "Age": "Patient_Age",
+            "Location": "Region",
+            "Daily_New_Cases": "New_Cases",
+            "Date_of_Data_Collection": "Reported_Date",
+        }
     )
-    assert "Rural" in df_internal["country"].values
 
-    # 年龄段分组：10 -> 0-17，30 -> 18-49，None -> Unknown（映射阶段先给 Unknown）
-    # 不保证顺序，所以用集合比较
-    assert "0-17" in set(df_internal["age_group"])
-    assert "18-49" in set(df_internal["age_group"])
-    assert "Unknown" in set(df_internal["age_group"])
+    df_internal = map_raw_to_internal_schema(df, source_name="auto")
 
-    # source_name 要被传递到 source_file
-    assert set(df_internal["source_file"]) == {"test_source"}
+    assert "age" in df_internal.columns
+    assert "country" in df_internal.columns
+    assert "value" in df_internal.columns
+    assert "date" in df_internal.columns
+
+    assert set(df_internal["indicator"]) == {"daily_new_cases"}
 
 
 def test_map_raw_to_internal_schema_missing_required_columns_raises():

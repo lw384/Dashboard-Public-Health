@@ -2,7 +2,7 @@
 # src/dashboard_public_health/infrastructure/db.py
 from __future__ import annotations
 
-from dashboard_public_health.domain.models import Record
+from dashboard_public_health.domain.models import HealthRecord
 import sqlite3
 from typing import Iterable, Dict, Any, Optional
 
@@ -31,18 +31,32 @@ def init_db_schema(conn: Optional[sqlite3.Connection] = None) -> None:
     cur = conn.cursor()
     cur.execute(
         """
-        CREATE TABLE IF NOT EXISTS record (
+        CREATE TABLE IF NOT EXISTS records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
             country TEXT NOT NULL,
-            indicator TEXT NOT NULL,
-            value REAL NOT NULL,
+            year INTEGER NOT NULL,
+            disease TEXT NOT NULL,
+            disease_category TEXT,
+            prevalence_rate REAL,
+            incidence_rate REAL,
+            mortality_rate REAL,
+            population_affected REAL,
+            recovery_rate REAL,
+            dalys REAL,
+            healthcare_access REAL,
+            doctors_per_1000 REAL,
+            hospital_beds_per_1000 REAL,
+            per_capita_income REAL,
+            education_index REAL,
+            urbanization_rate REAL,
             age_group TEXT,
+            gender TEXT,
+            treatment_available TEXT,
             source_file TEXT,   -- 可选：记录来自哪个 CSV
-            -- 可选：存多余字段
-            -- extra_json TEXT,
-            UNIQUE(date, country, indicator, age_group, source_file)
-        );
+                    -- 可选：存多余字段
+                    -- extra_json TEXT,
+            UNIQUE(country, year, disease, disease_category, age_group, gender,source_file)
+        )
         """
     )
     conn.commit()
@@ -51,48 +65,69 @@ def init_db_schema(conn: Optional[sqlite3.Connection] = None) -> None:
         conn.close()
 
 
-def insert_records(
-    records: Iterable[Dict[str, Any]],
-    conn: Optional[sqlite3.Connection] = None,
-) -> None:
+def insert_records(records, conn):
     """
-    Insert multiple records into 'record'.
-
-    Each record dict must have:
-      - date, country, indicator, value
-      - age_group, source_file (optional)
+    Insert cleaned internal-schema record into SQLite.
+    Avoid duplicate insertions using UNIQUE constraint.
     """
-    own_conn = False
-    if conn is None:
-        conn = get_conn()
-        own_conn = True
 
     cur = conn.cursor()
 
-    rows = [
-        (
-            r["date"],
-            r["country"],
-            r["indicator"],
-            r["value"],
-            r.get("age_group"),
-            r.get("source_file"),
-        )
-        for r in records
-    ]
+    sql = """
+        INSERT OR IGNORE INTO records (
+            country,
+            year,
+            disease,
+            disease_category,
+            prevalence_rate,
+            incidence_rate,
+            mortality_rate,
+            population_affected,
+            recovery_rate,
+            dalys,
+            healthcare_access,
+            doctors_per_1000,
+            hospital_beds_per_1000,
+            per_capita_income,
+            education_index,
+            urbanization_rate,
+            age_group,
+            gender,
+            treatment_available,
+            source_file
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
 
-    cur.executemany(
-        """
-        INSERT OR IGNORE INTO record
-        (date, country, indicator, value, age_group, source_file)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        rows,
-    )
+    rows = []
+    for r in records:
+        rows.append(
+            (
+                r.get("country"),
+                r.get("year"),
+                r.get("disease"),
+                r.get("disease_category"),
+                r.get("prevalence_rate"),
+                r.get("incidence_rate"),
+                r.get("mortality_rate"),
+                r.get("population_affected"),
+                r.get("recovery_rate"),
+                r.get("dalys"),
+                r.get("healthcare_access"),
+                r.get("doctors_per_1000"),
+                r.get("hospital_beds_per_1000"),
+                r.get("per_capita_income"),
+                r.get("education_index"),
+                r.get("urbanization_rate"),
+                r.get("age_group"),
+                r.get("gender"),
+                r.get("treatment_available"),
+                r.get("source_file"),
+            )
+        )
+
+    cur.executemany(sql, rows)
     conn.commit()
 
-    if own_conn:
-        conn.close()
     print(f"[db] Inserted {cur.rowcount} new rows (duplicates ignored).")
 
 
@@ -103,6 +138,6 @@ def fetch_all_records():
     rows = cur.fetchall()
     conn.close()
     return [
-        Record(country=row[0], year=row[1], metric_name=row[2], value=row[3])
+        HealthRecord(country=row[0], year=row[1], metric_name=row[2], value=row[3])
         for row in rows
     ]

@@ -5,6 +5,11 @@ from dashboard_public_health.application.query_service import (
     summarise_filtered_data,
 )
 from dashboard_public_health.config import DEFAULT_CSV
+from dashboard_public_health.application.visualization_service import (
+    plot_trend,
+    plot_grouped_bar,
+)
+from dashboard_public_health.application.logger_service import read_last_logs
 
 
 def run_cli():
@@ -15,6 +20,9 @@ def run_cli():
         print("3. View summary statistics")
         print("4. View grouped statistics")
         print("5. Show first 10 filtered rows")
+        print("6. Plot trend chart")
+        print("7. Plot grouped bar chart")
+        print("8. View log file")
         print("0. Exit")
         print("================================================================")
 
@@ -86,7 +94,35 @@ def run_cli():
                 age_group=age_group,
             )
             print(df.head(10))
+        elif choice == "6":
+            country, start_date, end_date, age_group = ask_filter_inputs()
+            df = filter_records_with_connection(
+                country=country,
+                start_date=start_date,
+                end_date=end_date,
+                age_group=age_group,
+            )
+            plot_trend(df)
 
+        elif choice == "7":
+            country, start_date, end_date, age_group = ask_filter_inputs()
+            df = filter_records_with_connection(
+                country=country,
+                start_date=start_date,
+                end_date=end_date,
+                age_group=age_group,
+            )
+            group_col = input("Group by (country/age_group): ").strip() or "country"
+            plot_grouped_bar(df, group_col)
+        elif choice == "8":
+            num = input(
+                "How many log lines would you like to view? (default 50): "
+            ).strip()
+            n = int(num) if num.isdigit() else 50
+
+            logs = read_last_logs(n)
+            print("\n=== Log Output ===")
+            print("\n".join(logs))
         else:
             print("Invalid selection. Please try again.")
 

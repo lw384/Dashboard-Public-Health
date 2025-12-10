@@ -4,15 +4,14 @@ import pandas as pd
 from dashboard_public_health.infrastructure.db import get_conn
 from dashboard_public_health.infrastructure.db import fetch_all_records
 from dashboard_public_health.domain.models import FilterCriteria
-from dashboard_public_health.domain.rules import (
-    apply_filter,
-)
 from dashboard_public_health.domain.analysis import (
     calculate_summary,
     group_by_country,
 )
+from dashboard_public_health.infrastructure.logger import log_action
 
 
+@log_action
 def filter_records(
     conn,
     *,
@@ -109,6 +108,7 @@ def filter_records_with_connection(
     return df
 
 
+@log_action
 def summarise_df(df: pd.DataFrame) -> dict:
     """
     Compute basic summary statistics on a filtered DataFrame.

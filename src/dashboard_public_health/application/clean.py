@@ -1,141 +1,192 @@
 # src/dashboard_public_health/application/clean.py
 from __future__ import annotations
-import math
-from dataclasses import dataclass
-from datetime import date
-from typing import Optional
-
 import pandas as pd
+from dashboard_public_health.application.auto_mapper import auto_match_columns
 
 
-# ---------- 内部领域模型（可选，用来解释你的 schema） ----------
-@dataclass
-class PublicHealthRecord:
-    date: date
-    country: str
-    indicator: str
-    value: float
-    age_group: Optional[str] = None
-    source_file: Optional[str] = None
-
-
-# ---------- 工具函数：列名归一化 ----------
+# -----------------------------------------------------
+# 1) Column Normalisation
+# -----------------------------------------------------
 def _normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Lower-case all column names and replace spaces with underscores.
-    This makes matching more robust across different CSV variants.
+    Normalize column names:
+    - lowercase
+    - replace spaces with underscores
+    - replace / with _
+    - replace % with 'percent'
     """
     df = df.copy()
-    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+    df.columns = [
+        (c.strip().lower().replace(" ", "_").replace("/", "_").replace("%", "percent"))
+        for c in df.columns
+    ]
     return df
 
 
-# ---------- 工具函数：年龄 → 年龄段 ----------
-def _map_age_to_group(age: float | int | None) -> str:
-    try:
-        a = float(age)
-    except (TypeError, ValueError):
-        return "Unknown"
-
-    if math.isnan(a):
-        return "Unknown"
-
-    if a < 18:
-        return "0-17"
-    if a < 50:
-        return "18-49"
-    if a < 65:
-        return "50-64"
-    return "65+"
-
-
-# ---------- 映射 + 选择我们关心的列 ----------
+# -----------------------------------------------------
+# 2) Internal Schema Mapping
+# -----------------------------------------------------
 def map_raw_to_internal_schema(
     df_raw: pd.DataFrame, *, source_name: str = "health_csv"
 ) -> pd.DataFrame:
     """
-    Transform the raw epidemiological CSV into the internal schema:
-    [date, country, indicator, value, age_group, source_file]
+    Convert raw Global Health Statistics CSV into a unified internal schema.
+    This normalises column names, validates required fields, and maps
+    heterogeneous CSV structures into a consistent DataFrame.
 
-    Expected raw columns (case-insensitive, underscores allowed):
-        - age
-        - location
-        - daily_new_cases
-        - date_of_data_collection
-
-    Raises:
-        ValueError if required columns are missing.
+    Internal schema fields:
+        - country
+        - year
+        - disease
+        - disease_category
+        - prevalence_rate
+        - incidence_rate
+        - mortality_rate
+        - population_affected
+        - recovery_rate
+        - dalys
+        - healthcare_access
+        - doctors_per_1000
+        - hospital_beds_per_1000
+        - per_capita_income
+        - education_index
+        - urbanization_rate
+        - age_group
+        - gender
+        - treatment_available
+        - source_file
     """
+
     df = _normalise_columns(df_raw)
 
-    required_cols = {"age", "location", "daily_new_cases", "date_of_data_collection"}
-    missing = [c for c in required_cols if c not in df.columns]
+    # --- Automatically match fields whenever possible ---
+    colmap = auto_match_columns(df)
+
+    # --- Required fields for internal schema ---
+    required = [
+        "country",
+        "year",
+        "disease",
+        "disease_category",
+        "prevalence_ratepercent",
+        "incidence_ratepercent",
+        "mortality_ratepercent",
+        "population_affected",
+        "healthcare_accesspercent",
+    ]
+
+    missing = [c for c in required if c not in df.columns and c not in colmap]
     if missing:
-        raise ValueError(f"CSV is missing required columns: {', '.join(missing)}")
+        raise ValueError(f"Missing required columns for internal schema: {missing}")
 
-    # 只提取我们关心的列
-    df_internal = pd.DataFrame()
-    df_internal["age"] = df["age"]
-    df_internal["country"] = df["location"]  # 用 Location 当作地区
-    df_internal["value"] = df["daily_new_cases"]
-    df_internal["date"] = df["date_of_data_collection"]
+    # Use colmap when available; fallback to direct column name
+    def pick(col):
+        if col in colmap:
+            return df[colmap[col]]
+        elif col in df.columns:
+            return df[col]
+        else:
+            return None  # optional field missing
 
-    # 固定指标类型
-    df_internal["indicator"] = "daily_new_cases"
+    df_internal = pd.DataFrame(
+        {
+            "country": pick("country"),
+            "year": pick("year"),
+            "disease": pick("disease"),
+            "disease_category": pick("disease_category"),
+            "prevalence_rate": pick("prevalence_ratepercent"),
+            "incidence_rate": pick("incidence_ratepercent"),
+            "mortality_rate": pick("mortality_ratepercent"),
+            "population_affected": pick("population_affected"),
+            "recovery_rate": pick("recovery_ratepercent"),
+            "dalys": pick("dalys"),
+            "healthcare_access": pick("healthcare_accesspercent"),
+            "doctors_per_1000": pick("doctors_per_1000"),
+            "hospital_beds_per_1000": pick("hospital_beds_per_1000"),
+            "per_capita_income": pick("per_capita_income_usd"),
+            "education_index": pick("education_index"),
+            "urbanization_rate": pick("urbanization_ratepercent"),
+            "age_group": pick("age_group"),
+            "gender": pick("gender"),
+            "treatment_available": pick("availability_of_vaccines_treatment"),
+        }
+    )
 
-    # 派生年龄段
-    df_internal["age_group"] = df_internal["age"].apply(_map_age_to_group)
-
-    # 来源信息（可选）
     df_internal["source_file"] = source_name
-
     return df_internal
 
 
-# ---------- 类型转换 + 缺失值处理 ----------
+# -----------------------------------------------------
+# 3) Cleaning & Type Conversion
+# -----------------------------------------------------
 def clean_internal_dataframe(df_internal: pd.DataFrame) -> pd.DataFrame:
     """
-    Clean the internal schema dataframe:
-      - drop rows with missing critical fields
-      - parse date to ISO string
-      - convert value to float
-      - strip strings
+    Clean the internal schema DataFrame:
+      - convert numeric columns
+      - enforce valid year
+      - drop rows missing essential fields
+      - strip whitespace and normalize string-like columns
     """
+
     df = df_internal.copy()
 
-    # 丢掉关键字段缺失的数据
-    df = df.dropna(subset=["date", "country", "indicator", "value"])
+    # --- Numeric columns ---
+    numeric_cols = [
+        "prevalence_rate",
+        "incidence_rate",
+        "mortality_rate",
+        "population_affected",
+        "recovery_rate",
+        "dalys",
+        "healthcare_access",
+        "doctors_per_1000",
+        "hospital_beds_per_1000",
+        "per_capita_income",
+        "education_index",
+        "urbanization_rate",
+    ]
 
-    # 日期 → datetime → ISO 字符串
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.dropna(subset=["date"])
-    df["date"] = df["date"].dt.strftime("%Y-%m-%d")
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # 数值 → float
-    df["value"] = pd.to_numeric(df["value"], errors="coerce")
-    df = df.dropna(subset=["value"])
-    df["value"] = df["value"].astype(float)
+    # --- Year as integer ---
+    df["year"] = pd.to_numeric(df["year"], errors="coerce")
 
-    # 字符串清洗
-    df["country"] = df["country"].astype(str).str.strip()
-    df["indicator"] = df["indicator"].astype(str).str.strip()
-    df["age_group"] = df["age_group"].astype(str).str.strip()
-    df["source_file"] = df["source_file"].astype(str).str.strip()
+    # Keep only valid years (optional safety)
+    df = df[df["year"].between(1900, 2100, inclusive="both")]
 
-    # 不再需要原始 age 列（如果你不想存它）
-    if "age" in df.columns:
-        df = df.drop(columns=["age"])
+    # --- Drop rows missing critical fields ---
+    critical = ["country", "year", "disease"]
+    df = df.dropna(subset=critical)
+
+    # --- Clean string fields ---
+    str_cols = [
+        "country",
+        "disease",
+        "disease_category",
+        "age_group",
+        "gender",
+        "treatment_available",
+    ]
+
+    for col in str_cols:
+        if col in df.columns:
+            # normalize text for grouping
+            df[col] = df[col].astype(str).str.strip().str.replace("  ", " ")
 
     return df
 
 
-# ---------- 对外暴露的清洗入口 ----------
+# -----------------------------------------------------
+# 4) Public API (called by ingestion_service)
+# -----------------------------------------------------
 def transform_raw_health_csv(
     df_raw: pd.DataFrame, *, source_name: str = "health_csv"
 ) -> pd.DataFrame:
     """
     High-level transformation:
-        raw CSV -> internal schema -> cleaned internal dataframe.
+        raw CSV → internal schema → cleaned DataFrame
     """
     df_internal = map_raw_to_internal_schema(df_raw, source_name=source_name)
     df_clean = clean_internal_dataframe(df_internal)
