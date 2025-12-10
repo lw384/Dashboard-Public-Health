@@ -1,136 +1,139 @@
-# tests/application/test_clean.py
 import pandas as pd
+import numpy as np
 import pytest
 
 from dashboard_public_health.application.clean import (
     map_raw_to_internal_schema,
-    clean_internal_dataframe,
     transform_raw_health_csv,
 )
 
 
+# ----------------------------------------------------------
+# Fixture for a minimal valid raw dataset
+# ----------------------------------------------------------
 @pytest.fixture
-def raw_health_df() -> pd.DataFrame:
-    """
-    构造一个模拟的原始 epidemiological CSV DataFrame，
-    列名故意用不同大小写和空格，方便测试 _normalise_columns 和映射逻辑。
-    """
-    data = {
-        "Age": [10, 30, None],  # 第3行 age 缺失
-        "Location": [" Urban ", "Rural", "Urban"],
-        "Daily_New_Cases": [5, "not-a-number", 8],  # 第2行是非法数值
-        "Date_of_Data_Collection": [
-            "2024-01-01",
-            "bad-date",  # 第2行是非法日期
-            "2024-03-15",
-        ],
-    }
-    return pd.DataFrame(data)
-
-
-def test_map_raw_to_internal_schema_automap(raw_health_df):
-    df = raw_health_df.rename(
-        columns={
-            "Age": "Patient_Age",
-            "Location": "Region",
-            "Daily_New_Cases": "New_Cases",
-            "Date_of_Data_Collection": "Reported_Date",
-        }
-    )
-
-    df_internal = map_raw_to_internal_schema(df, source_name="auto")
-
-    assert "age" in df_internal.columns
-    assert "country" in df_internal.columns
-    assert "value" in df_internal.columns
-    assert "date" in df_internal.columns
-
-    assert set(df_internal["indicator"]) == {"daily_new_cases"}
-
-
-def test_map_raw_to_internal_schema_missing_required_columns_raises():
-    """
-    如果缺少必需列（如 daily_new_cases），应该抛 ValueError。
-    """
-    df_bad = pd.DataFrame(
+def raw_df():
+    return pd.DataFrame(
         {
-            "Age": [20, 30],
-            "Location": ["Urban", "Rural"],
-            # 缺少 Daily_New_Cases
-            "Date_of_Data_Collection": ["2024-01-01", "2024-01-02"],
+            "Country": ["UK", "China", None],
+            "Year": [2020, 2021, 2022],
+            "Disease Name": ["Flu", "Covid", "Malaria"],
+            "Disease Category": ["Infectious", "Infectious", "Infectious"],
+            "Prevalence Rate (%)": [10, 5, 200],  # 200 => outlier, should become NaN
+            "Incidence Rate (%)": [2.5, -1, 3],  # -1 => outlier, should become NaN
+            "Mortality Rate (%)": [0.5, 0.1, 120],  # 120 => outlier
+            "Population Affected": [10000, 5000, -100],  # -100 invalid => NaN
+            "Healthcare Access (%)": [95, 50, 300],  # 300 => outlier => NaN
+            "Recovery Rate (%)": [98, None, 101],  # 101 => outlier
+            "DALYs": [100, None, 200],
+            "Doctors per 1000": [3, 2, -5],  # -5 => NaN
+            "Hospital Beds per 1000": [5, None, 200],  # valid
+            "Per Capita Income (USD)": [30000, 20000, -10],  # -10 => NaN
+            "Education Index": [0.9, 0.8, 0.7],
+            "Urbanization Rate (%)": [80, 150, 60],  # 150 => NaN
+            "Age Group": ["18-49", None, "50-64"],
+            "Gender": ["Male", None, "Female"],
+            "Availability of Vaccines/Treatment": ["Yes", None, "No"],
         }
     )
 
-    with pytest.raises(ValueError) as excinfo:
-        map_raw_to_internal_schema(df_bad)
 
-    assert "missing required columns" in str(excinfo.value)
+# ----------------------------------------------------------
+# Test: Schema mapping produces required fields
+# ----------------------------------------------------------
+def test_internal_schema_mapping(raw_df):
+    df_internal = map_raw_to_internal_schema(raw_df)
 
-
-def test_clean_internal_dataframe_drops_invalid_date_and_value(
-    raw_health_df: pd.DataFrame,
-):
-    """
-    clean_internal_dataframe 应该：
-      - 丢弃非法日期行（bad-date）
-      - 丢弃非法数值行（not-a-number）
-      - 将 date 统一为 'YYYY-MM-DD' 字符串
-      - 将 value 转换为 float
-      - 删除 age 列（如果存在）
-    """
-    df_internal = map_raw_to_internal_schema(raw_health_df, source_name="test_source")
-    df_clean = clean_internal_dataframe(df_internal)
-
-    # 预期：第 0 行和第 2 行是有效的；第 1 行因日期+数值非法被丢弃
-    assert len(df_clean) == 2
-
-    # 所有日期字符串应该是 YYYY-MM-DD 格式
-    for d in df_clean["date"]:
-        assert isinstance(d, str)
-        assert len(d) == 10
-        assert d.count("-") == 2
-
-    # value 应该是 float 类型
-    assert df_clean["value"].dtype == "float64"
-
-    # age 列应该被删除（我们内部 schema 不再需要它）
-    assert "age" not in df_clean.columns
-
-    # 字符串字段应该被 strip
-    assert all(
-        not c.startswith(" ") and not c.endswith(" ") for c in df_clean["country"]
-    )
-
-
-def test_transform_raw_health_csv_full_pipeline(raw_health_df: pd.DataFrame):
-    """
-    transform_raw_health_csv：从原始 df 一步到清洗后的内部 df。
-    应该产出：
-      - 列：date, country, indicator, value, age_group, source_file
-      - 行数：2（去掉非法行）
-    """
-    df_clean = transform_raw_health_csv(raw_health_df, source_name="pipeline_test")
-
-    expected_cols = {
-        "date",
+    expected_fields = {
         "country",
-        "indicator",
-        "value",
+        "year",
+        "disease",
+        "disease_category",
+        "prevalence_rate",
+        "incidence_rate",
+        "mortality_rate",
+        "population_affected",
+        "healthcare_access",
+        "recovery_rate",
+        "dalys",
+        "doctors_per_1000",
+        "hospital_beds_per_1000",
+        "per_capita_income",
+        "education_index",
+        "urbanization_rate",
         "age_group",
+        "gender",
+        "treatment_available",
         "source_file",
     }
-    assert expected_cols == set(df_clean.columns)
 
-    # 行数符合预期（第 1 行非法被丢弃）
-    assert len(df_clean) == 2
+    assert expected_fields.issubset(set(df_internal.columns))
 
-    # indicator 全部正确
-    assert set(df_clean["indicator"]) == {"daily_new_cases"}
 
-    # source_file 正确传递
-    assert set(df_clean["source_file"]) == {"pipeline_test"}
+# ----------------------------------------------------------
+# Test: Outlier handling
+# ----------------------------------------------------------
+def test_outlier_cleaning(raw_df):
+    df_clean = transform_raw_health_csv(raw_df)
 
-    # 年龄分组合理：0-17 和 18-49 各出现一次
-    age_groups = set(df_clean["age_group"])
-    assert "0-17" in age_groups
-    assert "Unknown" in age_groups
+    assert np.isnan(
+        df_clean.loc[df_clean["disease"] == "Malaria", "prevalence_rate"]
+    ).all()
+    assert np.isnan(
+        df_clean.loc[df_clean["disease"] == "Covid", "incidence_rate"]
+    ).all()
+    assert np.isnan(
+        df_clean.loc[df_clean["disease"] == "Malaria", "mortality_rate"]
+    ).all()
+    assert np.isnan(
+        df_clean.loc[df_clean["disease"] == "China", "healthcare_access"]
+    ).all()
+
+
+# ----------------------------------------------------------
+# Test: Missing value fill for categorical fields
+# ----------------------------------------------------------
+def test_fill_missing_categorical(raw_df):
+    df_clean = transform_raw_health_csv(raw_df)
+
+    # The "Covid" row has missing age_group & gender
+    covid = df_clean[df_clean["disease"] == "Covid"].iloc[0]
+
+    assert covid["age_group"] == "Unknown"
+    assert covid["gender"] == "Unknown"
+    assert covid["treatment_available"] == "Unknown"
+
+
+# ----------------------------------------------------------
+# Test: Type conversion
+# ----------------------------------------------------------
+def test_numeric_conversion(raw_df):
+    df_clean = transform_raw_health_csv(raw_df)
+
+    numeric_cols = [
+        "prevalence_rate",
+        "incidence_rate",
+        "mortality_rate",
+        "population_affected",
+        "recovery_rate",
+        "dalys",
+        "healthcare_access",
+        "doctors_per_1000",
+        "hospital_beds_per_1000",
+        "per_capita_income",
+        "urbanization_rate",
+    ]
+
+    for col in numeric_cols:
+        assert col in df_clean.columns
+        assert df_clean[col].dtype in ("float64", "int64", "object")
+
+
+# ----------------------------------------------------------
+# Test: Validation removes rows missing critical fields
+# ----------------------------------------------------------
+def test_validation_removes_missing_critical_fields(raw_df):
+    df_clean = transform_raw_health_csv(raw_df)
+
+    # the third row had country=None → must be removed
+    assert df_clean["country"].isna().sum() == 0

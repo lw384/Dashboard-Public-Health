@@ -1,4 +1,6 @@
 # application/ingestion_service.py
+from typing import List, Dict, Any
+import pandas as pd
 from dashboard_public_health.infrastructure.csv_reader import load_csv
 from dashboard_public_health.infrastructure.db import (
     get_conn,
@@ -6,7 +8,6 @@ from dashboard_public_health.infrastructure.db import (
     insert_records,
 )
 from dashboard_public_health.application.clean import transform_raw_health_csv
-from dashboard_public_health.infrastructure.logger import log_action
 from dashboard_public_health.infrastructure.logger import log_action
 
 
