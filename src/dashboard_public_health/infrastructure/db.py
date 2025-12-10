@@ -131,6 +131,14 @@ def insert_records(records, conn):
     print(f"[db] Inserted {cur.rowcount} new rows (duplicates ignored).")
 
 
+def drop_all_records(conn):
+    """Development-only: clear the entire table before re-ingestion."""
+    cur = conn.cursor()
+    cur.execute("DELETE FROM records;")
+    conn.commit()
+    print("[db] Cleared existing records (development mode).")
+
+
 def fetch_all_records():
     conn = get_conn()
     cur = conn.cursor()

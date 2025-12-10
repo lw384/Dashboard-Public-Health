@@ -6,6 +6,7 @@ from dashboard_public_health.infrastructure.db import (
     get_conn,
     init_db_schema,
     insert_records,
+    drop_all_records,
 )
 from dashboard_public_health.application.clean import transform_raw_health_csv
 from dashboard_public_health.infrastructure.logger import log_action
@@ -37,6 +38,9 @@ def ingest_from_csv(csv_path: str) -> None:
 
     # 4. 建立数据库连接并初始化 schema
     conn = get_conn()
+    # clear all data
+    drop_all_records(conn)
+
     init_db_schema(conn)
 
     # 5. 插入数据（避免重复）

@@ -11,6 +11,8 @@ from dashboard_public_health.application.visualization_service import (
 )
 from dashboard_public_health.application.logger_service import read_last_logs
 
+from dashboard_public_health.ui.load_provenance import load_provenance_summary
+
 
 def run_cli():
     while True:
@@ -23,6 +25,7 @@ def run_cli():
         print("6. Plot trend chart")
         print("7. Plot grouped bar chart")
         print("8. View log file")
+        print("9. View Data Cleaning Provenance Report")
         print("0. Exit")
         print("================================================================")
 
@@ -123,6 +126,26 @@ def run_cli():
             logs = read_last_logs(n)
             print("\n=== Log Output ===")
             print("\n".join(logs))
+        elif choice == "3":
+            summary = load_provenance_summary()
+            print("\n=== Data Cleaning Provenance Report ===")
+
+            if "error" in summary:
+                print(summary["error"])
+            else:
+                print(f"Total cleaning steps recorded: {summary['total_steps']}")
+                print(
+                    f"Total rows dropped across pipeline: {summary['total_rows_dropped']}\n"
+                )
+
+                for step in summary["steps"]:
+                    print(
+                        f"- {step['step']}: "
+                        f"before={step['before']} "
+                        f"after={step['after']} "
+                        f"dropped={step['dropped']}"
+                    )
+            print()
         else:
             print("Invalid selection. Please try again.")
 

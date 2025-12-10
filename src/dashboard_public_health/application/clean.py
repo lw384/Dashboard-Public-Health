@@ -20,7 +20,7 @@ within the file, making it easy to test and extend.
 from __future__ import annotations
 import pandas as pd
 import numpy as np
-
+from dashboard_public_health.application.provenance import with_provenance
 from dashboard_public_health.application.auto_mapper import auto_match_columns
 
 
@@ -145,6 +145,7 @@ def map_raw_to_internal_schema(
 # ============================================================
 
 
+@with_provenance("outlier_handling")
 def _handle_outliers(df: pd.DataFrame) -> pd.DataFrame:
     """
     Remove or clean implausible values that break the assumptions
@@ -192,6 +193,7 @@ def _handle_outliers(df: pd.DataFrame) -> pd.DataFrame:
 # ============================================================
 
 
+@with_provenance("missing_value_fill")
 def _fill_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     """
     Replace missing values for non-critical fields.
@@ -215,6 +217,7 @@ def _fill_missing_values(df: pd.DataFrame) -> pd.DataFrame:
 # ============================================================
 
 
+@with_provenance("type_conversion")
 def _convert_types(df: pd.DataFrame) -> pd.DataFrame:
     """
     Convert numeric and categorical fields to appropriate datatypes.
@@ -256,6 +259,7 @@ def _convert_types(df: pd.DataFrame) -> pd.DataFrame:
 # ============================================================
 
 
+@with_provenance("validation")
 def _validate(df: pd.DataFrame) -> pd.DataFrame:
     """
     Final validation step:
@@ -267,6 +271,37 @@ def _validate(df: pd.DataFrame) -> pd.DataFrame:
 
     critical_fields = ["country", "year", "disease"]
     df = df.dropna(subset=critical_fields)
+
+    return df
+
+
+# ============================================================
+# 6) Deduplication
+# ============================================================
+
+
+@with_provenance("duplicate_removal")
+def _deduplicate(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Remove duplicate rows based on business keys.
+    This reduces DB load and ensures consistent cleaned output.
+    """
+    dedupe_keys = [
+        "country",
+        "year",
+        "disease",
+        "disease_category",
+        "age_group",
+        "gender",
+    ]
+
+    existing = [k for k in dedupe_keys if k in df.columns]
+
+    before = len(df)
+    df = df.drop_duplicates(subset=existing)
+    after = len(df)
+
+    print(f"[clean] Deduplication removed {before - after} duplicates.")
 
     return df
 
@@ -300,5 +335,6 @@ def transform_raw_health_csv(
     df_internal = _fill_missing_values(df_internal)
     df_internal = _convert_types(df_internal)
     df_clean = _validate(df_internal)
+    df = _deduplicate(df_clean)
 
-    return df_clean
+    return df
