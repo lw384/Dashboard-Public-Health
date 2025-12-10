@@ -1,65 +1,79 @@
-# tests/application/test_summary_service.py
-
 import pandas as pd
+import pytest
+
 from dashboard_public_health.application.summary_service import (
-    compute_policy_summary,
-    compute_epidemiology_summary,
-    compute_ml_summary,
-    compute_global_summary,
+    descriptive_summary,
+    time_trend_summary,
+    grouped_summary,
+    correlation_summary,
 )
 
 
-# Construct minimal sample DF
+@pytest.fixture
 def sample_df():
     return pd.DataFrame(
         {
-            "country": ["A", "A", "B"],
-            "year": [2020, 2021, 2020],
-            "disease": ["Flu", "Flu", "Covid"],
-            "disease_category": ["Inf", "Inf", "Viral"],
-            "prevalence_rate": [10, 20, 30],
-            "incidence_rate": [5, 6, 7],
-            "mortality_rate": [1, 2, 3],
-            "population_affected": [1000, 2000, 3000],
-            "recovery_rate": [90, 92, 88],
-            "dalys": [100, 150, 200],
-            "healthcare_access": [70, 75, 80],
-            "doctors_per_1000": [3, 4, 5],
-            "hospital_beds_per_1000": [2, 3, 4],
-            "per_capita_income": [30000, 32000, 15000],
-            "education_index": [0.8, 0.82, 0.6],
-            "urbanization_rate": [60, 65, 40],
-            "age_group": ["18-49", "50-64", "18-49"],
-            "gender": ["Both", "Male", "Female"],
-            "treatment_available": ["Yes", "Yes", "No"],
+            "country": ["A", "A", "B", "B"],
+            "year": [2000, 2001, 2000, 2001],
+            "prevalence_rate": [10, 12, 8, 9],
+            "incidence_rate": [5, 6, 4, 5],
+            "mortality_rate": [2, 3, 1, 2],
+            "urbanization_rate": [50, 60, 55, 65],
+            "per_capita_income": [30000, 31000, 20000, 22000],
+            "education_index": [0.8, 0.85, 0.7, 0.72],
         }
     )
 
 
-def test_policy_summary():
-    df = sample_df()
-    summary = compute_policy_summary(df)
-    assert "avg_prevalence" in summary
-    assert "highest_prevalence_country" in summary
+# ---------------------------------------------------------
+# 1. Test descriptive summary
+# ---------------------------------------------------------
+def test_descriptive_summary(sample_df):
+    output = descriptive_summary(sample_df)
+
+    assert isinstance(output, str)
+    assert "📊 Basic Statistics" in output
+    assert "- prevalence_rate:" in output
+    assert "mean=" in output
+    assert "min=" in output
+    assert "max=" in output
 
 
-def test_epidemiology_summary():
-    df = sample_df()
-    summary = compute_epidemiology_summary(df)
-    assert "yearly_trend" in summary
-    assert "correlations" in summary
+# ---------------------------------------------------------
+# 2. Test time trend summary
+# ---------------------------------------------------------
+def test_time_trend_summary(sample_df):
+    output = time_trend_summary(sample_df)
+
+    assert isinstance(output, str)
+    assert "📈 Trends Over Time" in output
+    assert "Year   Prev   Inc   Mort" in output
+    assert "2000" in output
+    assert "2001" in output
 
 
-def test_ml_summary():
-    df = sample_df()
-    summary = compute_ml_summary(df)
-    assert "missing_values" in summary
-    assert "feature_stats" in summary
-    assert "outlier_thresholds" in summary
+# ---------------------------------------------------------
+# 3. Test grouped summary
+# ---------------------------------------------------------
+def test_grouped_summary(sample_df):
+    output = grouped_summary(sample_df, "country")
+
+    assert isinstance(output, str)
+    assert "📚 Grouped by country" in output
+    assert "A" in output
+    assert "B" in output
+    assert "Prev" in output
 
 
-def test_global_summary():
-    df = sample_df()
-    summary = compute_global_summary(df)
-    assert "top_mortality_countries" in summary
-    assert "disease_burden" in summary
+# ---------------------------------------------------------
+# 4. Test correlation summary
+# ---------------------------------------------------------
+def test_correlation_summary(sample_df):
+    output = correlation_summary(sample_df)
+
+    assert isinstance(output, str)
+    assert "🔗 Correlation Matrix" in output
+
+    # Key expected pairs
+    assert "prevalence_rate ↔ mortality_rate" in output
+    assert "prevalence_rate ↔ urbanization_rate" in output

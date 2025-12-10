@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Optional, Dict, Any
 import pandas as pd
 from dashboard_public_health.infrastructure.db import get_conn
 

@@ -2,33 +2,28 @@
 
 
 class Menu:
-    """
-    Base class for all menus.
-    Each menu stores options in the format:
-        { "1": {"label": "Do something", "handler": function } }
-    """
-
-    def __init__(self, title: str, options: dict):
+    def __init__(self, title, options, description=None):
         self.title = title
-        self.options = options  # must store label + handler
+        self.options = options
+        self.description = description
 
     def run(self):
         while True:
             print(f"\n===== {self.title} =====")
 
-            # Display options
-            for key, item in self.options.items():
-                label = item["label"]
-                print(f"{key}. {label}")
+            if self.description:
+                print(self.description)
+                print()
+
+            for key, handler in self.options.items():
+                print(f"{key}. {handler['label']}")
 
             choice = input("Select an option: ").strip()
 
-            if choice not in self.options:
-                print("Invalid selection. Try again.")
-                continue
-
-            handler = self.options[choice]["handler"]
-
-            # If handler returns True ⇒ exit menu
-            if handler():
-                break
+            if choice in self.options:
+                handler = self.options[choice]["handler"]
+                result = handler()
+                if result is True:
+                    return
+            else:
+                print("Invalid option, try again.")
