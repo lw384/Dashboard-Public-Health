@@ -7,6 +7,7 @@ from dashboard_public_health.application.query_service import (
     filter_records_with_connection,
 )
 from dashboard_public_health.infrastructure.db import get_conn
+from dashboard_public_health.ui.cli.helpers import collect_filters
 
 
 # --------------------------------------------------------------
@@ -147,6 +148,65 @@ def test_build_where_clause_advanced_filters():
     assert params == [50000]
 
 
+def test_build_where_clause_ignores_empty_values():
+    filters = {"country": None, "disease": "", "year_from": None}
+    where, params = build_where_clause(filters)
+
+    assert where == ""
+    assert params == []
+
+
+def test_build_where_clause_all_supported_fields():
+    filters = {
+        "country": "France",
+        "disease": "COVID-19",
+        "disease_category": "Viral",
+        "age_group": "50-64",
+        "gender": "Female",
+        "year_from": 2020,
+        "year_to": 2022,
+        "min_urbanization_rate": 80,
+        "min_healthcare_access": 70,
+        "min_hospital_beds": 4,
+        "min_income": 40000,
+        "min_education": 0.5,
+    }
+
+    where, params = build_where_clause(filters)
+
+    # All conditions should be present and ordered with params
+    for snippet in [
+        "country = ?",
+        "disease = ?",
+        "disease_category = ?",
+        "age_group = ?",
+        "gender = ?",
+        "year >= ?",
+        "year <= ?",
+        "urbanization_rate >= ?",
+        "healthcare_access >= ?",
+        "hospital_beds_per_1000 >= ?",
+        "per_capita_income >= ?",
+        "education_index >= ?",
+    ]:
+        assert snippet in where
+
+    assert params == [
+        "France",
+        "COVID-19",
+        "Viral",
+        "50-64",
+        "Female",
+        2020,
+        2022,
+        80,
+        70,
+        4,
+        40000,
+        0.5,
+    ]
+
+
 # --------------------------------------------------------------
 # Tests for filter_records_with_connection
 # --------------------------------------------------------------
@@ -190,3 +250,112 @@ def test_filter_multiple_conditions(sample_db):
 
     assert len(df) == 1
     assert df.iloc[0]["country"] == "France"
+
+
+def test_filter_advanced_combination(sample_db):
+    df = filter_records_with_connection(
+        min_healthcare_access=75,
+        min_income=48000,
+    )
+
+    # Only France matches both thresholds in sample data
+    assert len(df) == 1
+    assert df.iloc[0]["country"] == "France"
+
+
+# --------------------------------------------------------------
+# Tests for shared filter collector + integration
+# --------------------------------------------------------------
+
+
+def _input_sequence(values):
+    """Helper to simulate user input sequence."""
+    it = iter(values)
+
+    def _reader(_prompt=""):
+        return next(it, "")
+
+    return _reader
+
+
+def test_collect_filters_returns_full_schema():
+    reader = _input_sequence([""] * 12)
+    filters = collect_filters(input_func=reader, defaults=None)
+
+    expected_keys = {
+        "country",
+        "disease",
+        "disease_category",
+        "age_group",
+        "gender",
+        "year_from",
+        "year_to",
+        "min_urbanization_rate",
+        "min_healthcare_access",
+        "min_hospital_beds",
+        "min_income",
+        "min_education",
+    }
+
+    assert set(filters.keys()) == expected_keys
+    assert all(v is None for v in filters.values())
+
+
+def test_collect_filters_applies_defaults():
+    defaults = {"country": "Italy", "min_income": 50000, "year_from": 2020}
+    reader = _input_sequence(["", "", "", "", "", "", "", "", "", "", "", ""])
+
+    filters = collect_filters(input_func=reader, defaults=defaults)
+
+    assert filters["country"] == "Italy"
+    assert filters["min_income"] == 50000
+    assert filters["year_from"] == 2020
+
+
+def test_build_where_clause_matches_shared_keys():
+    reader = _input_sequence(
+        [
+            "France",  # country
+            "COVID-19",  # disease
+            "Viral",  # disease_category
+            "50-64",  # age_group
+            "Female",  # gender
+            "2020",  # year_from
+            "2022",  # year_to
+            "80",  # min_urbanization_rate
+            "70",  # min_healthcare_access
+            "4",  # min_hospital_beds
+            "40000",  # min_income
+            "0.5",  # min_education
+        ]
+    )
+
+    filters = collect_filters(input_func=reader, defaults=None)
+    where, params = build_where_clause(filters)
+
+    assert "country = ?" in where
+    assert "disease = ?" in where
+    assert "disease_category = ?" in where
+    assert "age_group = ?" in where
+    assert "gender = ?" in where
+    assert "year >= ?" in where and "year <= ?" in where
+    assert "urbanization_rate >= ?" in where
+    assert "healthcare_access >= ?" in where
+    assert "hospital_beds_per_1000 >= ?" in where
+    assert "per_capita_income >= ?" in where
+    assert "education_index >= ?" in where
+
+    assert params == [
+        "France",
+        "COVID-19",
+        "Viral",
+        "50-64",
+        "Female",
+        2020,
+        2022,
+        80.0,
+        70.0,
+        4.0,
+        40000.0,
+        0.5,
+    ]
