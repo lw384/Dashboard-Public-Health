@@ -3,6 +3,10 @@ from dashboard_public_health.infrastructure.db import (
     get_conn,
     init_db_schema,
     insert_records,
+    insert_record,
+    get_record_by_id,
+    update_record_by_id,
+    delete_record_by_id,
 )
 from dashboard_public_health.domain.models import HealthRecord
 
@@ -106,3 +110,47 @@ def test_insert_records_accepts_healthrecord(temp_db_path):
     conn.close()
 
     assert count == 1
+
+
+def test_crud_round_trip(temp_db_path):
+    conn = get_conn()
+    init_db_schema(conn)
+
+    rec = HealthRecord(
+        country="Japan",
+        year=2022,
+        disease="Influenza",
+        disease_category="Viral",
+        prevalence_rate=7.0,
+        incidence_rate=4.0,
+        mortality_rate=1.1,
+        population_affected=5000,
+        recovery_rate=92.0,
+        dalys=300.0,
+        healthcare_access=80.0,
+        doctors_per_1000=2.5,
+        hospital_beds_per_1000=3.0,
+        per_capita_income=35000.0,
+        education_index=0.8,
+        urbanization_rate=75.0,
+        age_group="18-49",
+        gender="Female",
+        treatment_available="Yes",
+        source_file="test.csv",
+    )
+
+    new_id = insert_record(rec, conn)
+    fetched = get_record_by_id(new_id, conn)
+    assert fetched is not None
+    assert fetched.country == "Japan"
+
+    updated = update_record_by_id(new_id, {"mortality_rate": 0.9}, conn)
+    assert updated == 1
+    fetched2 = get_record_by_id(new_id, conn)
+    assert fetched2.mortality_rate == 0.9
+
+    deleted = delete_record_by_id(new_id, conn)
+    assert deleted == 1
+    assert get_record_by_id(new_id, conn) is None
+
+    conn.close()

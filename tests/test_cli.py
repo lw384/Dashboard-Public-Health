@@ -5,6 +5,7 @@ from dashboard_public_health.ui.cli.main_menu import MainMenu
 from dashboard_public_health.ui.cli.filter_menu import FilterMenu
 from dashboard_public_health.ui.cli.router import Menu
 from dashboard_public_health.ui.cli.load_provenance import load_provenance_summary
+from dashboard_public_health.ui.cli.crud_menu import CRUDMenu
 
 
 # --------------------------------------------------------------------
@@ -180,3 +181,87 @@ def test_provenance_no_file(monkeypatch, tmp_path):
     summary = load_provenance_summary()
 
     assert "error" in summary
+
+
+# --------------------------------------------------------------------
+# 6. CRUD MENU — BASIC OPERATIONS
+# --------------------------------------------------------------------
+
+
+def test_crud_menu_create(monkeypatch):
+    inputs = iter(
+        [
+            "Japan",  # country
+            "2022",  # year
+            "Influenza",  # disease
+            "Viral",  # category
+            "7.0",  # prevalence
+            "",  # incidence
+            "",  # mortality
+            "",  # population
+            "",  # recovery
+            "",  # dalys
+            "",  # healthcare_access
+            "",  # doctors
+            "",  # beds
+            "",  # income
+            "",  # education
+            "",  # urbanization
+            "",  # age_group
+            "",  # gender
+            "",  # treatment
+            "",  # source_file
+        ]
+    )
+    monkeypatch.setattr("builtins.input", lambda *_: next(inputs, ""))
+
+    captured = {}
+
+    def fake_insert(rec):
+        captured["country"] = rec.country
+        return 1
+
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.crud_menu.insert_record", fake_insert
+    )
+
+    menu = CRUDMenu()
+    menu.create_record()
+
+    assert captured["country"] == "Japan"
+
+
+def test_crud_menu_update_delete(monkeypatch):
+    inputs = iter(
+        [
+            "1",  # update id
+            "mortality_rate",
+            "0.9",
+            "1",  # delete id
+        ]
+    )
+    monkeypatch.setattr("builtins.input", lambda *_: next(inputs, ""))
+
+    calls = {"update": None, "delete": None}
+
+    def fake_update(record_id, updates):
+        calls["update"] = (record_id, updates)
+        return 1
+
+    def fake_delete(record_id):
+        calls["delete"] = record_id
+        return 1
+
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.crud_menu.update_record_by_id", fake_update
+    )
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.crud_menu.delete_record_by_id", fake_delete
+    )
+
+    menu = CRUDMenu()
+    menu.update_record()
+    menu.delete_record()
+
+    assert calls["update"] == (1, {"mortality_rate": 0.9})
+    assert calls["delete"] == 1

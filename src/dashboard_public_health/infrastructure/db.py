@@ -13,7 +13,7 @@ def get_conn() -> sqlite3.Connection:
     """
     Always use config.DB_PATH so pytest monkeypatch can redirect the DB.
     """
-    db_path = config.DB_PATH  # ⚠️ 关键：每次从 config 读取
+    db_path = config.DB_PATH
     db_path.parent.mkdir(parents=True, exist_ok=True)
     return sqlite3.connect(db_path)
 
@@ -132,6 +132,84 @@ def insert_records(records, conn):
     conn.commit()
 
     print(f"[db] Inserted {cur.rowcount} new rows (duplicates ignored).")
+
+
+def insert_record(record, conn=None):
+    """Insert a single record (dict or HealthRecord)."""
+    own_conn = False
+    if conn is None:
+        conn = get_conn()
+        own_conn = True
+    insert_records([record], conn)
+    last_id = None
+    try:
+        last_id = conn.execute("SELECT last_insert_rowid();").fetchone()[0]
+    except Exception:
+        last_id = None
+    if own_conn:
+        conn.close()
+    return last_id
+
+
+def get_record_by_id(record_id: int, conn=None) -> Optional[HealthRecord]:
+    own_conn = False
+    if conn is None:
+        conn = get_conn()
+        own_conn = True
+
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM records WHERE id = ?", (record_id,))
+    row = cur.fetchone()
+    if row is None:
+        if own_conn:
+            conn.close()
+        return None
+
+    columns = [col[0] for col in cur.description]
+    data = dict(zip(columns, row))
+    record = HealthRecord.from_dict(data)
+
+    if own_conn:
+        conn.close()
+    return record
+
+
+def update_record_by_id(record_id: int, updates: Dict[str, Any], conn=None) -> int:
+    """Update fields for a given record id. Returns affected row count."""
+    own_conn = False
+    if conn is None:
+        conn = get_conn()
+        own_conn = True
+
+    if not updates:
+        return 0
+
+    columns, params = zip(*[(f"{k} = ?", v) for k, v in updates.items()])
+    sql = f"UPDATE records SET {', '.join(columns)} WHERE id = ?"
+    cur = conn.cursor()
+    cur.execute(sql, (*params, record_id))
+    conn.commit()
+
+    count = cur.rowcount
+    if own_conn:
+        conn.close()
+    return count
+
+
+def delete_record_by_id(record_id: int, conn=None) -> int:
+    own_conn = False
+    if conn is None:
+        conn = get_conn()
+        own_conn = True
+
+    cur = conn.cursor()
+    cur.execute("DELETE FROM records WHERE id = ?", (record_id,))
+    conn.commit()
+    count = cur.rowcount
+
+    if own_conn:
+        conn.close()
+    return count
 
 
 def drop_all_records(conn):
