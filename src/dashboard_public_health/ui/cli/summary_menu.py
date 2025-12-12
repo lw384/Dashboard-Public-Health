@@ -10,7 +10,7 @@ from dashboard_public_health.application.summary_service import (
 from dashboard_public_health.application.query_service import (
     filter_records_with_connection,
 )
-from dashboard_public_health.ui.cli.helpers import ask_filter_inputs
+from dashboard_public_health.ui.cli.helpers import collect_filters
 from dashboard_public_health.application.visualization_service import (
     plot_descriptive,
     plot_time_trends,
@@ -41,11 +41,13 @@ class SummaryMenu(Menu):
             options=options,
             description="This feature generates insights based on your current filters.",
         )
+        self.last_filters = None
 
     # ---------- Shared Filter Step ----------
     def _load_filtered_df(self):
-        filters = ask_filter_inputs()
-        df = filter_records_with_connection(**filters)
+        filters = collect_filters(defaults=self.last_filters)
+        self.last_filters = filters
+        df = filter_records_with_connection(filters)
         if df.empty:
             print("\n⚠ No data matches your filters.\n")
             return None

@@ -28,7 +28,7 @@ def test_main_menu_ingest(monkeypatch):
         called["ok"] = True
 
     monkeypatch.setattr(
-        "dashboard_public_health.application.ingestion_service.ingest_from_csv",
+        "dashboard_public_health.ui.cli.main_menu.ingest_from_csv",
         fake_ingest,
     )
 
@@ -51,64 +51,40 @@ def test_main_menu_provenance(monkeypatch):
 
 
 # --------------------------------------------------------------------
-# 2. FILTER MENU — BASIC FILTER INPUT
-# --------------------------------------------------------------------
-
-
-def test_filter_menu_basic_filters(monkeypatch):
-    inputs = iter(
-        [
-            "UK",  # country
-            "Flu",  # disease
-            "Viral",  # category
-            "18-49",  # age_group
-            "Both",  # gender
-            "2000",  # year_from
-            "2020",  # year_to
-        ]
-    )
-    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-
-    filters = FilterMenu.ask_basic_filters()
-
-    assert filters["country"] == "UK"
-    assert filters["disease"] == "Flu"
-    assert filters["disease_category"] == "Viral"
-    assert filters["age_group"] == "18-49"
-    assert filters["gender"] == "Both"
-    assert filters["year_from"] == 2000
-    assert filters["year_to"] == 2020
-
-
-# --------------------------------------------------------------------
-# 3. FILTER MENU — APPLY FILTERS + CALL SERVICE
+# 2. FILTER MENU — APPLY FILTERS + CALL SERVICE
 # --------------------------------------------------------------------
 
 
 def test_filter_menu_apply_filters(monkeypatch):
-    # Mock input sequence
+    # Mock input sequence for collect_filters (12 prompts)
     inputs = iter(
         [
-            "UK",
-            "Flu",
-            "Viral",
-            "18-49",
-            "Both",
-            "2000",
-            "2020",  # basic filters
-            "n",  # do not use advanced filters
+            "UK",  # country
+            "Flu",  # disease
+            "Viral",  # disease_category
+            "18-49",  # age_group
+            "Both",  # gender
+            "2000",  # year_from
+            "2020",  # year_to
+            "80",  # min_urbanization_rate
+            "70",  # min_healthcare_access
+            "4",  # min_hospital_beds
+            "40000",  # min_income
+            "0.5",  # min_education
         ]
     )
-    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+    monkeypatch.setattr("builtins.input", lambda *_: next(inputs, ""))
 
     # Mock returned dataframe
     fake_df = pd.DataFrame({"country": ["UK"], "year": [2020]})
+    captured = {}
 
-    def fake_query(**kwargs):
+    def fake_query(filters):
+        captured["filters"] = filters
         return fake_df
 
     monkeypatch.setattr(
-        "dashboard_public_health.application.query_service.filter_records_with_connection",
+        "dashboard_public_health.ui.cli.filter_menu.filter_records_with_connection",
         fake_query,
     )
 
@@ -117,6 +93,54 @@ def test_filter_menu_apply_filters(monkeypatch):
 
     assert isinstance(menu.last_df, pd.DataFrame)
     assert len(menu.last_df) == 1
+    assert captured["filters"].country == "UK"
+    assert captured["filters"].min_income == 40000.0
+
+
+# --------------------------------------------------------------------
+# 3. SUMMARY MENU — FILTER COLLECTION
+# --------------------------------------------------------------------
+
+
+def test_summary_menu_collect_filters(monkeypatch):
+    inputs = iter(
+        [
+            "France",
+            "COVID-19",
+            "Viral",
+            "50-64",
+            "Female",
+            "2020",
+            "2022",
+            "80",
+            "70",
+            "4",
+            "50000",
+            "0.6",
+        ]
+    )
+    monkeypatch.setattr("builtins.input", lambda *_: next(inputs, ""))
+
+    fake_df = pd.DataFrame({"country": ["France"], "year": [2021]})
+    captured = {}
+
+    def fake_query(filters):
+        captured["filters"] = filters
+        return fake_df
+
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.summary_menu.filter_records_with_connection",
+        fake_query,
+    )
+
+    from dashboard_public_health.ui.cli.summary_menu import SummaryMenu
+
+    smenu = SummaryMenu()
+    df = smenu._load_filtered_df()
+
+    assert not df.empty
+    assert captured["filters"].country == "France"
+    assert captured["filters"].min_healthcare_access == 70.0
 
 
 # --------------------------------------------------------------------
@@ -131,7 +155,7 @@ def test_router_menu_run(monkeypatch):
         called["exit"] = True
         return True
 
-    menu = Menu("Test", {"1": fake_exit})
+    menu = Menu("Test", {"1": {"label": "Exit", "handler": fake_exit}})
 
     # simulate selecting option 1 then exit
     monkeypatch.setattr("builtins.input", lambda _: "1")

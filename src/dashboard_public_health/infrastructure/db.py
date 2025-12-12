@@ -68,6 +68,7 @@ def init_db_schema(conn: Optional[sqlite3.Connection] = None) -> None:
 def insert_records(records, conn):
     """
     Insert cleaned internal-schema record into SQLite.
+    Accepts iterable of dicts or HealthRecord instances.
     Avoid duplicate insertions using UNIQUE constraint.
     """
 
@@ -98,32 +99,34 @@ def insert_records(records, conn):
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
 
-    rows = []
-    for r in records:
-        rows.append(
-            (
-                r.get("country"),
-                r.get("year"),
-                r.get("disease"),
-                r.get("disease_category"),
-                r.get("prevalence_rate"),
-                r.get("incidence_rate"),
-                r.get("mortality_rate"),
-                r.get("population_affected"),
-                r.get("recovery_rate"),
-                r.get("dalys"),
-                r.get("healthcare_access"),
-                r.get("doctors_per_1000"),
-                r.get("hospital_beds_per_1000"),
-                r.get("per_capita_income"),
-                r.get("education_index"),
-                r.get("urbanization_rate"),
-                r.get("age_group"),
-                r.get("gender"),
-                r.get("treatment_available"),
-                r.get("source_file"),
-            )
+    def to_tuple(r):
+        if isinstance(r, HealthRecord):
+            return r.to_db_tuple()
+        # assume mapping/dict
+        return (
+            r.get("country"),
+            r.get("year"),
+            r.get("disease"),
+            r.get("disease_category"),
+            r.get("prevalence_rate"),
+            r.get("incidence_rate"),
+            r.get("mortality_rate"),
+            r.get("population_affected"),
+            r.get("recovery_rate"),
+            r.get("dalys"),
+            r.get("healthcare_access"),
+            r.get("doctors_per_1000"),
+            r.get("hospital_beds_per_1000"),
+            r.get("per_capita_income"),
+            r.get("education_index"),
+            r.get("urbanization_rate"),
+            r.get("age_group"),
+            r.get("gender"),
+            r.get("treatment_available"),
+            r.get("source_file"),
         )
+
+    rows = [to_tuple(r) for r in records]
 
     cur.executemany(sql, rows)
     conn.commit()
@@ -142,10 +145,10 @@ def drop_all_records(conn):
 def fetch_all_records():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT country, year, value FROM record")
+    cur.execute("SELECT country, year, value FROM records")
     rows = cur.fetchall()
     conn.close()
     return [
-        HealthRecord(country=row[0], year=row[1], metric_name=row[2], value=row[3])
+        HealthRecord(country=row[0], year=row[1], disease="", disease_category="")
         for row in rows
     ]

@@ -4,6 +4,7 @@ from dashboard_public_health.infrastructure.db import (
     init_db_schema,
     insert_records,
 )
+from dashboard_public_health.domain.models import HealthRecord
 
 
 # -------------------------------------------------------------
@@ -69,3 +70,39 @@ def test_insert_records_inserts_and_ignores_duplicates(temp_db_path):
     assert count == 1
 
     conn.close()
+
+
+def test_insert_records_accepts_healthrecord(temp_db_path):
+    conn = get_conn()
+    init_db_schema(conn)
+
+    rec = HealthRecord(
+        country="Spain",
+        year=2020,
+        disease="Flu",
+        disease_category="Viral",
+        prevalence_rate=5.0,
+        incidence_rate=3.0,
+        mortality_rate=1.0,
+        population_affected=1000,
+        recovery_rate=90.0,
+        dalys=200.0,
+        healthcare_access=70.0,
+        doctors_per_1000=3.0,
+        hospital_beds_per_1000=4.0,
+        per_capita_income=30000.0,
+        education_index=0.7,
+        urbanization_rate=60.0,
+        age_group="18-49",
+        gender="Male",
+        treatment_available="Yes",
+        source_file="test.csv",
+    )
+
+    insert_records([rec], conn)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM records WHERE country='Spain';")
+    (count,) = cursor.fetchone()
+    conn.close()
+
+    assert count == 1

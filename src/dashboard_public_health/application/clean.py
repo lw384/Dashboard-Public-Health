@@ -99,6 +99,30 @@ def map_raw_to_internal_schema(
             f"Cannot build internal schema. Missing required fields: {missing}"
         )
 
+    def _resolve_column(name: str):
+        """
+        Try multiple normalisation variants to locate the correct column.
+        Handles differences like parentheses, slashes, and % wording.
+        """
+        candidates = [
+            name,
+            name.replace("/", "_"),
+            name.replace("%", "percent"),
+            name.replace("(", "").replace(")", ""),
+        ]
+        # also try combined replacement
+        candidates.append(
+            name.replace("/", "_")
+            .replace("%", "percent")
+            .replace("(", "")
+            .replace(")", "")
+        )
+
+        for cand in candidates:
+            if cand in df.columns:
+                return df[cand]
+        return None
+
     # Helper accessor function
     def pick(field: str):
         """
@@ -108,7 +132,9 @@ def map_raw_to_internal_schema(
             - or return None (optional fields)
         """
         if field in colmap:
-            return df[colmap[field]]
+            series = _resolve_column(colmap[field])
+            if series is not None:
+                return series
         if field in df.columns:
             return df[field]
         return None

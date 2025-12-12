@@ -52,7 +52,7 @@ def with_provenance(step_name: str):
             after_cols = list(result.columns)
 
             entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
                 "step": step_name,
                 "before_rows": before_rows,
                 "after_rows": after_rows,

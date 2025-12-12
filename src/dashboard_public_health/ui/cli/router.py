@@ -18,7 +18,11 @@ class Menu:
             for key, handler in self.options.items():
                 print(f"{key}. {handler['label']}")
 
-            choice = input("Select an option: ").strip()
+            try:
+                choice = input("Select an option: ").strip()
+            except KeyboardInterrupt:
+                print("\nExiting program...")
+                return
 
             if choice in self.options:
                 handler = self.options[choice]["handler"]

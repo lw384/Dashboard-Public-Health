@@ -1,6 +1,7 @@
 import pytest
 import pandas as pd
 import sqlite3
+from dataclasses import asdict
 
 from dashboard_public_health.application.query_service import (
     build_where_clause,
@@ -8,6 +9,7 @@ from dashboard_public_health.application.query_service import (
 )
 from dashboard_public_health.infrastructure.db import get_conn
 from dashboard_public_health.ui.cli.helpers import collect_filters
+from dashboard_public_health.domain.models import FilterCriteria
 
 
 # --------------------------------------------------------------
@@ -297,8 +299,9 @@ def test_collect_filters_returns_full_schema():
         "min_education",
     }
 
-    assert set(filters.keys()) == expected_keys
-    assert all(v is None for v in filters.values())
+    data = asdict(filters)
+    assert set(data.keys()) == expected_keys
+    assert all(v is None for v in data.values())
 
 
 def test_collect_filters_applies_defaults():
@@ -307,9 +310,9 @@ def test_collect_filters_applies_defaults():
 
     filters = collect_filters(input_func=reader, defaults=defaults)
 
-    assert filters["country"] == "Italy"
-    assert filters["min_income"] == 50000
-    assert filters["year_from"] == 2020
+    assert filters.country == "Italy"
+    assert filters.min_income == 50000
+    assert filters.year_from == 2020
 
 
 def test_build_where_clause_matches_shared_keys():
@@ -359,3 +362,36 @@ def test_build_where_clause_matches_shared_keys():
         40000.0,
         0.5,
     ]
+
+
+def test_build_where_clause_accepts_filtercriteria():
+    criteria = FilterCriteria(
+        country="Italy",
+        disease="Influenza",
+        year_from=2019,
+        year_to=2021,
+    )
+
+    where, params = build_where_clause(criteria)
+
+    assert "country = ?" in where
+    assert "disease = ?" in where
+    assert "year >= ?" in where and "year <= ?" in where
+    assert params == ["Italy", "Influenza", 2019, 2021]
+
+
+def test_filter_records_with_filtercriteria(sample_db):
+    criteria = FilterCriteria(country="France", disease_category="Viral")
+    df = filter_records_with_connection(criteria)
+
+    assert len(df) == 1
+    assert df.iloc[0]["country"] == "France"
+
+
+def test_filter_records_as_models(sample_db):
+    criteria = FilterCriteria(country="France")
+    records = filter_records_with_connection(criteria, as_records=True)
+
+    assert len(records) == 1
+    assert records[0].country == "France"
+    assert records[0].disease == "COVID-19"

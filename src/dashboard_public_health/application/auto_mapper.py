@@ -12,7 +12,11 @@ def auto_match_columns(df):
       - Return dict: { internal_schema_field : csv_column_name }
     """
 
-    cols = list(df.columns)
+    def _norm(name: str) -> str:
+        return name.strip().lower().replace(" ", "_").replace("(", "").replace(")", "")
+
+    # keep original names for mapping back to the DataFrame
+    cols = [(c, _norm(c)) for c in df.columns]
     colmap = {}
 
     def find(*keywords):
@@ -20,9 +24,9 @@ def auto_match_columns(df):
         Find first column that contains ALL keyword fragments.
         Example: find("prevalence", "rate") will match prevalence_ratepercent.
         """
-        for c in cols:
-            if all(k in c for k in keywords):
-                return c
+        for original, norm in cols:
+            if all(k in norm for k in keywords):
+                return norm
         return None
 
     # Mapping rules
@@ -32,12 +36,16 @@ def auto_match_columns(df):
         "disease": [("disease", "name"), ("disease",)],
         "disease_category": [("category",), ("class",)],
         "prevalence_ratepercent": [("prevalence",), ("prev_rate",)],
+        "prevalence_rate": [("prevalence",), ("prev_rate",)],
         "incidence_ratepercent": [("incidence",), ("new", "cases")],
+        "incidence_rate": [("incidence",), ("new", "cases")],
         "mortality_ratepercent": [("mortality",), ("death",)],
+        "mortality_rate": [("mortality",), ("death",)],
         "population_affected": [("population", "affected"), ("affected",)],
         "recovery_ratepercent": [("recovery",), ("recover",)],
         "dalys": [("dalys",), ("burden",)],
         "healthcare_accesspercent": [("healthcare", "access"), ("med", "access")],
+        "healthcare_access": [("healthcare", "access"), ("med", "access")],
         "doctors_per_1000": [("doctor",), ("physician",)],
         "hospital_beds_per_1000": [("hospital_beds",), ("beds",)],
         "per_capita_income_usd": [("income",), ("gdp",)],
@@ -46,6 +54,11 @@ def auto_match_columns(df):
         "age_group": [("age_group",), ("age", "group")],
         "gender": [("gender",), ("sex",)],
         "availability_of_vaccines_treatment": [
+            ("vaccine",),
+            ("treatment",),
+            ("availability",),
+        ],
+        "treatment_available": [
             ("vaccine",),
             ("treatment",),
             ("availability",),

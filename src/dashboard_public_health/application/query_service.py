@@ -1,15 +1,31 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 import pandas as pd
 from dashboard_public_health.infrastructure.db import get_conn
 from dashboard_public_health.infrastructure.logger import log_action
+from dashboard_public_health.domain.models import FilterCriteria, HealthRecord
 
 
-def build_where_clause(filters: Dict[str, Any]):
+def _normalize_filters(filters: Optional[FilterCriteria | Dict[str, Any]] = None, **kwargs):
+    """
+    Accept either a FilterCriteria dataclass, a dict, or kwargs and return a dict.
+    """
+    if filters is None:
+        return {k: v for k, v in kwargs.items()}
+
+    if isinstance(filters, FilterCriteria):
+        return filters.__dict__.copy()
+
+    # assume mapping
+    return dict(filters)
+
+
+def build_where_clause(filters: FilterCriteria | Dict[str, Any]):
     """
     Convert Python filter parameters into a SQL WHERE clause + parameters.
     Only adds conditions for filters that are not None.
     """
 
+    filters = _normalize_filters(filters)
     conditions = []
     params = []
 
@@ -64,15 +80,21 @@ def build_where_clause(filters: Dict[str, Any]):
 
 
 @log_action
-def filter_records_with_connection(**filters) -> pd.DataFrame:
+def filter_records_with_connection(
+    filters: Optional[FilterCriteria | Dict[str, Any]] = None,
+    *,
+    as_records: bool = False,
+    **filters_kwargs,
+) -> pd.DataFrame | List[HealthRecord]:
     """
     Execute dynamic SQL query based on provided filters.
-    Returns a DataFrame ready for summary/visualization.
+    Returns a DataFrame by default, or list[HealthRecord] when as_records=True.
     """
 
     conn = get_conn()
 
-    where, params = build_where_clause(filters)
+    merged_filters = _normalize_filters(filters, **filters_kwargs)
+    where, params = build_where_clause(merged_filters)
 
     query = f"""
         SELECT *
@@ -81,4 +103,6 @@ def filter_records_with_connection(**filters) -> pd.DataFrame:
     """
 
     df = pd.read_sql_query(query, conn, params=params)
+    if as_records:
+        return [HealthRecord.from_dict(rec) for rec in df.to_dict(orient="records")]
     return df

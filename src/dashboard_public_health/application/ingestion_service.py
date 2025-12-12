@@ -8,16 +8,17 @@ from dashboard_public_health.infrastructure.db import (
     insert_records,
     drop_all_records,
 )
+from dashboard_public_health.domain.models import HealthRecord
 from dashboard_public_health.application.clean import transform_raw_health_csv
 from dashboard_public_health.infrastructure.logger import log_action
 
 
-def dataframe_to_records(df: pd.DataFrame) -> List[Dict[str, Any]]:
+def dataframe_to_records(df: pd.DataFrame) -> List[HealthRecord]:
     """
-    Convert a cleaned internal-schema DataFrame into a list of dicts
+    Convert a cleaned internal-schema DataFrame into a list of HealthRecord
     ready to be inserted into the database.
     """
-    return df.to_dict(orient="records")
+    return [HealthRecord.from_dict(rec) for rec in df.to_dict(orient="records")]
 
 
 @log_action
