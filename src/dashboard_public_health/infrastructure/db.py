@@ -218,15 +218,3 @@ def drop_all_records(conn):
     cur.execute("DELETE FROM records;")
     conn.commit()
     print("[db] Cleared existing records (development mode).")
-
-
-def fetch_all_records():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT country, year, value FROM records")
-    rows = cur.fetchall()
-    conn.close()
-    return [
-        HealthRecord(country=row[0], year=row[1], disease="", disease_category="")
-        for row in rows
-    ]
