@@ -17,11 +17,12 @@ from dashboard_public_health.application.visualization import (
     plot_grouped,
     plot_corr,
 )
+from dashboard_public_health.ui.cli.session import SessionContext
 
 
 class SummaryMenu(Menu):
 
-    def __init__(self):
+    def __init__(self, session: SessionContext | None = None):
         options = {
             "1": {
                 "label": "View descriptive summary",
@@ -41,18 +42,32 @@ class SummaryMenu(Menu):
             options=options,
             description="This feature generates insights based on your current filters.",
         )
-        self.last_filters = None
+        self.session = session or SessionContext()
 
     # ---------- Shared Filter Step ----------
     def _load_filtered_df(self):
-        filters = collect_filters(defaults=self.last_filters)
-        if filters is None:
-            return None
-        self.last_filters = filters
+        reuse = None
+        if self.session.filters:
+            reuse = input("Reuse last filters? (y/n): ").strip().lower()
+
+        if reuse == "y" and self.session.last_df is not None:
+            return self.session.last_df
+
+        if reuse == "y" and self.session.filters:
+            filters = self.session.filters
+        else:
+            filters = collect_filters(defaults=self.session.filters)
+            if filters is None:
+                return None
+            self.session.filters = filters
+
         df = filter_records_with_connection(filters)
         if df.empty:
             print("\n⚠ No data matches your filters.\n")
             return None
+        if "id" in df.columns:
+            df = df.drop(columns=["id"])
+        self.session.last_df = df
         return df
 
     # ---------- Option 1 ----------
@@ -62,9 +77,10 @@ class SummaryMenu(Menu):
             return
         numeric = df.select_dtypes(include="number")
         table = numeric.describe().T.round(2)
+        table_df = table.reset_index().rename(columns={"index": "metric"})
         print("\n=== Descriptive Summary (table) ===\n")
         print(table.to_string())
-        self._maybe_export(df, default_name="descriptive.csv")
+        self._maybe_export(table_df, default_name="descriptive.csv")
         input("\nPress Enter to continue...")
 
     # ---------- Option 2 ----------

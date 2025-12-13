@@ -1,6 +1,5 @@
 # src/dashboard_public_health/ui/cli/export_menu.py
 
-import os
 import pandas as pd
 from pathlib import Path
 from dashboard_public_health.ui.cli.router import Menu
@@ -8,26 +7,34 @@ from dashboard_public_health.ui.cli.helpers import collect_filters
 from dashboard_public_health.application.query import (
     filter_records_with_connection,
 )
+from dashboard_public_health.ui.cli.session import SessionContext
 
 OUTPUT_DIR = Path("outputs")
 
 
 class ExportMenu(Menu):
-    def __init__(self):
+    def __init__(self, session: SessionContext | None = None):
         options = {
             "1": {"label": "Export CSV", "handler": self.export_csv},
             "2": {"label": "Export JSON", "handler": self.export_json},
             "0": {"label": "Back", "handler": self.exit_menu},
         }
         super().__init__("Export Data", options)
+        self.session = session or SessionContext()
 
     def _load_df(self):
+        # prefer cached df
+        if self.session.last_df is not None:
+            return self.session.last_df
         try:
-            filters = collect_filters()
+            filters = collect_filters(defaults=self.session.filters)
         except KeyboardInterrupt:
             print("\n[export] Cancelled.")
             return None
-        return filter_records_with_connection(filters)
+        self.session.filters = filters
+        df = filter_records_with_connection(filters)
+        self.session.last_df = df
+        return df
 
     @staticmethod
     def _ensure_output_dir():

@@ -1,11 +1,10 @@
 # src/dashboard_public_health/ui/cli/filter_menu.py
 
 from dashboard_public_health.ui.cli.router import Menu
-from dashboard_public_health.application.query import (
-    filter_records_with_connection,
-)
+from dashboard_public_health.application.query import filter_records_with_connection
 from dashboard_public_health.ui.cli.helpers import collect_filters
 from dashboard_public_health.ui.cli.export_menu import ExportMenu
+from dashboard_public_health.ui.cli.session import SessionContext
 
 MAX_DISPLAY_ROWS = 50
 
@@ -16,14 +15,13 @@ class FilterMenu(Menu):
     Inherits from Menu so it can be opened by MainMenu.
     """
 
-    def __init__(self):
+    def __init__(self, session: SessionContext | None = None):
         options = {
             "1": {"label": "Apply filters", "handler": self.apply_filters},
             "0": {"label": "Back", "handler": self.exit_menu},
         }
         super().__init__("Filter Records", options)
-        self.last_df = None  # store last filtered results for summary / visualization
-        self.last_filters = None  # persist filters across runs
+        self.session = session or SessionContext()
 
     # ---------------------------
     # Filtering Logic
@@ -33,13 +31,20 @@ class FilterMenu(Menu):
         """Collect filter options and run filtering."""
         print("\nCollecting filter conditions…")
 
-        filters = collect_filters(defaults=self.last_filters)
-        if filters is None:
-            return
-        self.last_filters = filters
+        # Offer reuse of previous filters/results
+        reuse = None
+        if self.session.filters:
+            reuse = input("Reuse last filters? (y/n): ").strip().lower()
 
-        df = filter_records_with_connection(filters)
-        self.last_df = df
+        if reuse == "y" and self.session.last_df is not None:
+            df = self.session.last_df
+        else:
+            filters = collect_filters(defaults=self.session.filters)
+            if filters is None:
+                return
+            self.session.filters = filters
+            df = filter_records_with_connection(filters)
+            self.session.last_df = df
 
         print(f"\nFiltered {len(df)} rows.")
 

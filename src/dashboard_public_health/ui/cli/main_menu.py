@@ -9,10 +9,12 @@ from dashboard_public_health.application.logger import read_last_logs
 from dashboard_public_health.ui.cli.load_provenance import load_provenance_summary
 from dashboard_public_health.ui.cli.crud_menu import CRUDMenu
 from dashboard_public_health.config import DEFAULT_CSV
+from dashboard_public_health.ui.cli.session import SessionContext
 
 
 class MainMenu(Menu):
     def __init__(self):
+        self.session = SessionContext()
         options = {
             "1": {"label": "Ingest data from CSV", "handler": self.ingest_data},
             "2": {"label": "Filter data", "handler": self.open_filter_menu},
@@ -34,11 +36,11 @@ class MainMenu(Menu):
 
     def open_filter_menu(self):
         """Filter data"""
-        FilterMenu().run()
+        FilterMenu(session=self.session).run()
 
     def open_summary_menu(self):
         """Summary analysis"""
-        SummaryMenu().run()
+        SummaryMenu(session=self.session).run()
 
     def open_visualization_menu(self):
         """Visualize results"""
@@ -46,7 +48,7 @@ class MainMenu(Menu):
 
     def open_export_menu(self):
         """Export results"""
-        ExportMenu().run()
+        ExportMenu(session=self.session).run()
 
     def show_logs(self):
         """View log output"""
