@@ -1,17 +1,17 @@
 # src/dashboard_public_health/ui/cli/summary_menu.py
 
 from dashboard_public_health.ui.cli.router import Menu
-from dashboard_public_health.application.summary_service import (
+from dashboard_public_health.application.summary import (
     descriptive_summary,
     time_trend_summary,
     grouped_summary,
     correlation_summary,
 )
-from dashboard_public_health.application.query_service import (
+from dashboard_public_health.application.query import (
     filter_records_with_connection,
 )
 from dashboard_public_health.ui.cli.helpers import collect_filters
-from dashboard_public_health.application.visualization_service import (
+from dashboard_public_health.application.visualization import (
     plot_descriptive,
     plot_time_trends,
     plot_grouped,

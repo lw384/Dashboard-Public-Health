@@ -4,8 +4,8 @@ from dashboard_public_health.ui.cli.router import Menu
 from dashboard_public_health.ui.cli.filter_menu import FilterMenu
 from dashboard_public_health.ui.cli.summary_menu import SummaryMenu
 from dashboard_public_health.ui.cli.export_menu import ExportMenu
-from dashboard_public_health.application.ingestion_service import ingest_from_csv
-from dashboard_public_health.application.logger_service import read_last_logs
+from dashboard_public_health.application.ingestion import ingest_from_csv
+from dashboard_public_health.application.logger import read_last_logs
 from dashboard_public_health.ui.cli.load_provenance import load_provenance_summary
 from dashboard_public_health.ui.cli.crud_menu import CRUDMenu
 from dashboard_public_health.config import DEFAULT_CSV

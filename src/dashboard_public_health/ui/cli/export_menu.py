@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 from dashboard_public_health.ui.cli.router import Menu
 from dashboard_public_health.ui.cli.helpers import collect_filters
-from dashboard_public_health.application.query_service import (
+from dashboard_public_health.application.query import (
     filter_records_with_connection,
 )
 

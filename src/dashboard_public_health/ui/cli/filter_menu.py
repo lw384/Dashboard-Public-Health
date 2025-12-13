@@ -1,7 +1,7 @@
 # src/dashboard_public_health/ui/cli/filter_menu.py
 
 from dashboard_public_health.ui.cli.router import Menu
-from dashboard_public_health.application.query_service import (
+from dashboard_public_health.application.query import (
     filter_records_with_connection,
 )
 from dashboard_public_health.ui.cli.helpers import collect_filters

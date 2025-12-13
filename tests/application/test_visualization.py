@@ -1,16 +1,14 @@
 import pandas as pd
 import matplotlib
-
-matplotlib.use("Agg")  # prevent GUI windows during tests
-
 import matplotlib.pyplot as plt
-
-from dashboard_public_health.application.visualization_service import (
+from dashboard_public_health.application.visualization import (
     plot_descriptive,
     plot_time_trends,
     plot_grouped,
     plot_corr,
 )
+
+matplotlib.use("Agg")  # prevent GUI windows during tests
 
 
 # --------------------------

@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from dashboard_public_health.application.summary_service import (
+from dashboard_public_health.application.summary import (
     descriptive_summary,
     time_trend_summary,
     grouped_summary,

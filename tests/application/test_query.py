@@ -3,7 +3,7 @@ import pandas as pd
 import sqlite3
 from dataclasses import asdict
 
-from dashboard_public_health.application.query_service import (
+from dashboard_public_health.application.query import (
     build_where_clause,
     filter_records_with_connection,
 )
