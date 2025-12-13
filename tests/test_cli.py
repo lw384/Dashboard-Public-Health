@@ -7,6 +7,8 @@ from dashboard_public_health.ui.cli.router import Menu
 from dashboard_public_health.ui.cli.load_provenance import load_provenance_summary
 from dashboard_public_health.ui.cli.crud_menu import CRUDMenu
 from dashboard_public_health.ui.cli.export_menu import ExportMenu
+from dashboard_public_health.ui.cli.session import SessionContext
+from dashboard_public_health.domain.models import FilterCriteria
 
 
 # --------------------------------------------------------------------
@@ -94,10 +96,37 @@ def test_filter_menu_apply_filters(monkeypatch):
     menu = FilterMenu()
     menu.apply_filters()
 
-    assert isinstance(menu.last_df, pd.DataFrame)
-    assert len(menu.last_df) == 1
+    assert isinstance(menu.session.last_df, pd.DataFrame)
+    assert len(menu.session.last_df) == 1
     assert captured["filters"].country == "UK"
     assert captured["filters"].min_income == 40000.0
+
+
+def test_filter_menu_reuse_filters(monkeypatch):
+    # first input "y" to reuse, then no further prompts needed
+    inputs = iter(["y"])
+    monkeypatch.setattr("builtins.input", lambda *_: next(inputs, ""))
+
+    fake_df = pd.DataFrame({"country": ["UK"], "year": [2020]})
+    session_df = fake_df.copy()
+    session_filters = FilterCriteria(country="UK")
+
+    calls = {"queried": False}
+
+    def fake_query(filters):
+        calls["queried"] = True
+        return fake_df
+
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.filter_menu.filter_records_with_connection",
+        fake_query,
+    )
+
+    menu = FilterMenu(session=SessionContext(filters=session_filters, last_df=session_df))
+    menu.apply_filters()
+
+    assert menu.session.last_df.equals(session_df)
+    assert calls["queried"] is False
 
 
 def test_filter_menu_export(monkeypatch, tmp_path):
@@ -339,7 +368,7 @@ def test_summary_menu_export(monkeypatch, tmp_path):
 
     # patch plotting to no-op
     monkeypatch.setattr(
-        "dashboard_public_health.application.visualization_service.plot_descriptive",
+        "dashboard_public_health.application.visualization.plot_descriptive",
         lambda df: None,
     )
     monkeypatch.setattr(
