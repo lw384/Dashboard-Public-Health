@@ -16,12 +16,9 @@ class MainMenu(Menu):
         options = {
             "1": {"label": "Ingest data from CSV", "handler": self.ingest_data},
             "2": {"label": "Filter data", "handler": self.open_filter_menu},
-            "3": {"label": "Summary analysis", "handler": self.open_summary_menu},
-            "4": {"label": "Manage records (CRUD)", "handler": self.open_crud_menu},
-            # "5": {
-            #     "label": "Export results",
-            #     "handler": self.open_export_menu
-            # },
+            "3": {"label": "Export filtered dataset", "handler": self.open_export_menu},
+            "4": {"label": "Summary analysis", "handler": self.open_summary_menu},
+            "5": {"label": "Manage records (CRUD)", "handler": self.open_crud_menu},
             "6": {"label": "View log output", "handler": self.show_logs},
             "7": {"label": "View cleaning provenance", "handler": self.show_provenance},
             "0": {"label": "Exit", "handler": self.exit_menu},

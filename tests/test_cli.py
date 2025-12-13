@@ -6,6 +6,7 @@ from dashboard_public_health.ui.cli.filter_menu import FilterMenu
 from dashboard_public_health.ui.cli.router import Menu
 from dashboard_public_health.ui.cli.load_provenance import load_provenance_summary
 from dashboard_public_health.ui.cli.crud_menu import CRUDMenu
+from dashboard_public_health.ui.cli.export_menu import ExportMenu
 
 
 # --------------------------------------------------------------------
@@ -18,6 +19,7 @@ def test_main_menu_registers_options():
 
     assert "1" in menu.options  # ingest
     assert "2" in menu.options  # filter submenu
+    assert "3" in menu.options  # export
     assert "6" in menu.options  # logs
     assert "7" in menu.options  # provenance
 
@@ -96,6 +98,28 @@ def test_filter_menu_apply_filters(monkeypatch):
     assert len(menu.last_df) == 1
     assert captured["filters"].country == "UK"
     assert captured["filters"].min_income == 40000.0
+
+
+def test_filter_menu_export(monkeypatch, tmp_path):
+    # filters (12 prompts) + export choice + filename
+    inputs = iter([""] * 12 + ["csv", "filtered.csv"])
+    monkeypatch.setattr("builtins.input", lambda *_: next(inputs, ""))
+
+    fake_df = pd.DataFrame({"country": ["UK"], "year": [2020]})
+
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.filter_menu.filter_records_with_connection",
+        lambda filters: fake_df,
+    )
+    # route export directory
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.export_menu.OUTPUT_DIR", tmp_path
+    )
+
+    menu = FilterMenu()
+    menu.apply_filters()
+
+    assert (tmp_path / "filtered.csv").exists()
 
 
 # --------------------------------------------------------------------
@@ -265,3 +289,72 @@ def test_crud_menu_update_delete(monkeypatch):
 
     assert calls["update"] == (1, {"mortality_rate": 0.9})
     assert calls["delete"] == 1
+
+
+# --------------------------------------------------------------------
+# 7. EXPORT MENU — FILTER + SAVE
+# --------------------------------------------------------------------
+
+
+def test_export_menu_exports_csv(monkeypatch, tmp_path):
+    # filters (12 prompts) then filename prompt
+    inputs = iter([""] * 12 + [""])  # blank filters and default filename
+    monkeypatch.setattr("builtins.input", lambda *_: next(inputs, ""))
+
+    fake_df = pd.DataFrame({"country": ["UK"], "year": [2020]})
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.export_menu.filter_records_with_connection",
+        lambda filters: fake_df,
+    )
+
+    # direct ExportMenu constant to temp dir
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.export_menu.OUTPUT_DIR", tmp_path
+    )
+
+    menu = ExportMenu()
+    menu.export_csv()
+
+    assert (tmp_path / "export.csv").exists()
+
+
+# --------------------------------------------------------------------
+# 8. SUMMARY MENU — EXPORT PROMPT
+# --------------------------------------------------------------------
+
+
+def test_summary_menu_export(monkeypatch, tmp_path):
+    # filter inputs (12), export choice y, filename, press enter
+    inputs = iter(
+        [""] * 12  # filters none
+        + ["y", "summary.csv", ""]  # export prompt, filename, press enter
+    )
+    monkeypatch.setattr("builtins.input", lambda *_: next(inputs, ""))
+
+    fake_df = pd.DataFrame({"country": ["France"], "year": [2021]})
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.summary_menu.filter_records_with_connection",
+        lambda filters: fake_df,
+    )
+
+    # patch plotting to no-op
+    monkeypatch.setattr(
+        "dashboard_public_health.application.visualization_service.plot_descriptive",
+        lambda df: None,
+    )
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.summary_menu.plot_descriptive",
+        lambda df: None,
+    )
+
+    # route export dir to tmp
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.export_menu.OUTPUT_DIR", tmp_path
+    )
+
+    from dashboard_public_health.ui.cli.summary_menu import SummaryMenu
+
+    smenu = SummaryMenu()
+    smenu.show_descriptive()
+
+    assert (tmp_path / "summary.csv").exists()

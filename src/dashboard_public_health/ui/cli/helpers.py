@@ -44,25 +44,29 @@ def collect_filters(input_func=None, defaults=None) -> FilterCriteria:
         except ValueError:
             return defaults.get(key)
 
-    filters = {
-        "country": read_str("country", "Country (blank = none): "),
-        "disease": read_str("disease", "Disease (blank = none): "),
-        "disease_category": read_str("disease_category", "Disease category (blank = none): "),
-        "age_group": read_str("age_group", "Age group (blank = none): "),
-        "gender": read_str("gender", "Gender (blank = none): "),
-        "year_from": read_int("year_from", "Year from (blank = none): "),
-        "year_to": read_int("year_to", "Year to (blank = none): "),
-        "min_urbanization_rate": read_float(
-            "min_urbanization_rate", "Min urbanization rate (%): "
-        ),
-        "min_healthcare_access": read_float(
-            "min_healthcare_access", "Min healthcare access (%): "
-        ),
-        "min_hospital_beds": read_float(
-            "min_hospital_beds", "Min hospital beds per 1000: "
-        ),
-        "min_income": read_float("min_income", "Min per capita income: "),
-        "min_education": read_float("min_education", "Min education index: "),
-    }
+    try:
+        filters = {
+            "country": read_str("country", "Country (blank = none): "),
+            "disease": read_str("disease", "Disease (blank = none): "),
+            "disease_category": read_str("disease_category", "Disease category (blank = none): "),
+            "age_group": read_str("age_group", "Age group (blank = none): "),
+            "gender": read_str("gender", "Gender (blank = none): "),
+            "year_from": read_int("year_from", "Year from (blank = none): "),
+            "year_to": read_int("year_to", "Year to (blank = none): "),
+            "min_urbanization_rate": read_float(
+                "min_urbanization_rate", "Min urbanization rate (%): "
+            ),
+            "min_healthcare_access": read_float(
+                "min_healthcare_access", "Min healthcare access (%): "
+            ),
+            "min_hospital_beds": read_float(
+                "min_hospital_beds", "Min hospital beds per 1000: "
+            ),
+            "min_income": read_float("min_income", "Min per capita income: "),
+            "min_education": read_float("min_education", "Min education index: "),
+        }
+    except KeyboardInterrupt:
+        print("\n[filter] Cancelled.")
+        return None
 
     return FilterCriteria(**filters)

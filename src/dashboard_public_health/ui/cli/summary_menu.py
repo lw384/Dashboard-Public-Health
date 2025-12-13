@@ -46,6 +46,8 @@ class SummaryMenu(Menu):
     # ---------- Shared Filter Step ----------
     def _load_filtered_df(self):
         filters = collect_filters(defaults=self.last_filters)
+        if filters is None:
+            return None
         self.last_filters = filters
         df = filter_records_with_connection(filters)
         if df.empty:
@@ -58,10 +60,11 @@ class SummaryMenu(Menu):
         df = self._load_filtered_df()
         if df is None:
             return
-        summary = descriptive_summary(df)
-        print("\n=== Descriptive Summary ===\n")
-        print(summary)
-        plot_descriptive(df)
+        numeric = df.select_dtypes(include="number")
+        table = numeric.describe().T.round(2)
+        print("\n=== Descriptive Summary (table) ===\n")
+        print(table.to_string())
+        self._maybe_export(df, default_name="descriptive.csv")
         input("\nPress Enter to continue...")
 
     # ---------- Option 2 ----------
@@ -73,6 +76,7 @@ class SummaryMenu(Menu):
         print("\n=== Time Trends ===\n")
         print(summary)
         plot_time_trends(df)
+        self._maybe_export(df, default_name="time_trends.csv")
         input("\nPress Enter to continue...")
 
     # ---------- Option 3 ----------
@@ -88,6 +92,7 @@ class SummaryMenu(Menu):
         print(grouped_summary(df, col))
         plot_grouped(df, col)
 
+        self._maybe_export(df, default_name=f"grouped_{col}.csv")
         input("\nPress Enter to continue...")
 
     # ---------- Option 4 ----------
@@ -100,8 +105,21 @@ class SummaryMenu(Menu):
         print("\n=== Correlation Analysis ===\n")
         print(summary)
         plot_corr(df)
+        self._maybe_export(df, default_name="correlations.csv")
         input("\nPress Enter to continue...")
 
     def exit_menu(self):
         print("Returning to main menu.")
         return True
+
+    # ---------- Export helper ----------
+    def _maybe_export(self, df, default_name="export.csv"):
+        choice = input("Export this filtered dataset? (y/n): ").strip().lower()
+        if choice != "y":
+            return
+        from dashboard_public_health.ui.cli.export_menu import ExportMenu
+
+        exporter = ExportMenu()
+        filename = exporter._prompt_filename(default_name)
+        exporter._ensure_output_dir()
+        exporter._export_df(df, filename, "csv")

@@ -24,7 +24,8 @@ pylint_report.txt
 mock_data/mock/*.csv
 mock_data/mock/**/*.csv
 archive/
-
+outputs/*
+# Ignore generated database files
 data/*.db
 data/**/*.db
 data/raw/*.csv
