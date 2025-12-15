@@ -36,7 +36,7 @@ def log_action(func):
 
         result = func(*args, **kwargs)
 
-        # 如果返回 DataFrame，可以记录行数
+        # If result is a DataFrame, log its row count
         try:
             if hasattr(result, "shape"):
                 logger.info(

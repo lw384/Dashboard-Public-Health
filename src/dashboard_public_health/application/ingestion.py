@@ -28,22 +28,22 @@ def ingest_from_csv(csv_path: str) -> None:
     """
     print(f"[ingestion] Starting ingestion from: {csv_path}")
 
-    # 1. 读原始数据
+    # 1. Load raw data
     raw_df = load_csv(csv_path)
 
-    # 2. 清洗 + 类型转换
+    # 2. Clean + type conversion
     cleaned_df = transform_raw_health_csv(raw_df)
 
-    # 3. 转成 records
+    # 3. Convert to records
     records = dataframe_to_records(cleaned_df)
 
-    # 4. 建立数据库连接并初始化 schema
+    # 4. Open DB connection and init schema
     conn = get_conn()
     init_db_schema(conn)
     # clear all data after schema exists
     drop_all_records(conn)
 
-    # 5. 插入数据（避免重复）
+    # 5. Insert data (deduplicated)
     insert_records(records, conn)
 
     conn.close()

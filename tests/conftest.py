@@ -13,8 +13,7 @@ def sample_csv_path(project_root=config.PROJECT_ROOT) -> Path:
 @pytest.fixture
 def temp_db_path(tmp_path, monkeypatch):
     """
-    使用 pytest 自带的 tmp_path 临时目录，
-    并 monkeypatch 掉 config.DB_PATH,避免测试污染真实 data/public_health.db
+    Use pytest tmp_path and monkeypatch config.DB_PATH to avoid touching real data/public_health.db
     """
     db_path = tmp_path / "test_public_health.db"
     monkeypatch.setattr(config, "DB_PATH", db_path)

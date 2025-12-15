@@ -14,7 +14,7 @@ import logging
 
 
 # -------------------------------------------------------------
-# 1. 测试 DB Schema 是否被正确创建
+# 1. Test DB schema is created correctly
 # -------------------------------------------------------------
 def test_init_db_creates_table(temp_db_path):
     conn = get_conn()
@@ -31,13 +31,13 @@ def test_init_db_creates_table(temp_db_path):
 
 
 # -------------------------------------------------------------
-# 2. 测试 INSERT + UNIQUE 去重 逻辑
+# 2. Test INSERT + UNIQUE dedup logic
 # -------------------------------------------------------------
 def test_insert_records_inserts_and_ignores_duplicates(temp_db_path):
     conn = get_conn()
     init_db_schema(conn)
 
-    # ⚠️ 按新 internal schema 构造一条合法记录
+    # Build a valid record per the internal schema
     rec1 = {
         "country": "UK",
         "year": 2020,
@@ -72,7 +72,7 @@ def test_insert_records_inserts_and_ignores_duplicates(temp_db_path):
     cursor.execute("SELECT COUNT(*) FROM records;")
     (count,) = cursor.fetchone()
 
-    # 去重后应该只剩 1 条
+    # After deduplication, only 1 row should remain
     assert count == 1
 
     conn.close()

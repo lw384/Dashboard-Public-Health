@@ -54,8 +54,8 @@ def init_db_schema(conn: Optional[sqlite3.Connection] = None) -> None:
             age_group TEXT,
             gender TEXT,
             treatment_available TEXT,
-            source_file TEXT,   -- 可选：记录来自哪个 CSV
-                    -- 可选：存多余字段
+            source_file TEXT,   -- Optional: source CSV name
+                    -- Optional: store extra fields
                     -- extra_json TEXT,
             UNIQUE(country, year, disease, disease_category, age_group, gender,source_file)
         )

@@ -15,9 +15,9 @@ def load_csv(csv_path: str) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"CSV file not found: {path}")
 
-    # 根据你的数据编码调整 encoding / sep
+    # Adjust encoding/sep if your dataset differs
     df = pd.read_csv(path)
 
-    # 可选：简单打印一下，方便调试
+    # Optional: print basic info for debugging
     print(f"[file_loader] Loaded {len(df)} rows from {path}")
     return df

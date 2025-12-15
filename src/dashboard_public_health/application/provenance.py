@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import wraps
 import pandas as pd
 
-from dashboard_public_health.infrastructure.logger import logger  # ★ 引入 logger
+from dashboard_public_health.infrastructure.logger import logger  # import shared logger
 
 PROVENANCE_DIR = "logs/provenance"
 PROVENANCE_FILE = os.path.join(PROVENANCE_DIR, "clean_provenance.jsonl")
@@ -61,10 +61,10 @@ def with_provenance(step_name: str):
                 "after_cols": after_cols,
             }
 
-            # 写入 provenance 文件
+            # write provenance file
             _write_jsonl(entry)
 
-            # ★ 写入 logger
+            # also write to logger
             _log_to_logger(entry)
 
             return result
