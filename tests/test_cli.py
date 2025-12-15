@@ -3,6 +3,7 @@
 import pandas as pd
 from dashboard_public_health.ui.cli.main_menu import MainMenu
 from dashboard_public_health.ui.cli.filter_menu import FilterMenu
+from dashboard_public_health.ui.cli.summary_menu import SummaryMenu
 from dashboard_public_health.ui.cli.router import Menu
 from dashboard_public_health.ui.cli.load_provenance import load_provenance_summary
 from dashboard_public_health.ui.cli.crud_menu import CRUDMenu
@@ -347,6 +348,31 @@ def test_export_menu_exports_csv(monkeypatch, tmp_path):
     assert (tmp_path / "export.csv").exists()
 
 
+def test_export_df_duration(capsys, monkeypatch, tmp_path):
+    df = pd.DataFrame({"country": ["UK"]})
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.export_menu.OUTPUT_DIR", tmp_path
+    )
+
+    ticks = iter([1.0, 1.5])
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.export_menu.perf_counter", lambda: next(ticks)
+    )
+    called = {}
+
+    def fake_to_csv(path, index):
+        called["path"] = path
+
+    df.to_csv = fake_to_csv  # type: ignore
+
+    menu = ExportMenu()
+    menu._export_df(df, "t.csv", "csv")
+    captured = capsys.readouterr().out
+
+    assert "0.5000s" in captured
+    assert (tmp_path / "t.csv").exists() is False  # fake_to_csv avoided write
+
+
 # --------------------------------------------------------------------
 # 8. SUMMARY MENU — EXPORT PROMPT
 # --------------------------------------------------------------------
@@ -360,7 +386,7 @@ def test_summary_menu_export(monkeypatch, tmp_path):
     )
     monkeypatch.setattr("builtins.input", lambda *_: next(inputs, ""))
 
-    fake_df = pd.DataFrame({"country": ["France"], "year": [2021]})
+    fake_df = pd.DataFrame({"country": ["France"], "year": [2021], "prevalence_rate": [1.0]})
     monkeypatch.setattr(
         "dashboard_public_health.ui.cli.summary_menu.filter_records_with_connection",
         lambda filters: fake_df,
@@ -387,3 +413,30 @@ def test_summary_menu_export(monkeypatch, tmp_path):
     smenu.show_descriptive()
 
     assert (tmp_path / "summary.csv").exists()
+    df_out = pd.read_csv(tmp_path / "summary.csv")
+    assert "metric" in df_out.columns
+
+
+def test_summary_menu_descriptive_excludes_year(monkeypatch, capsys, tmp_path):
+    # filters empty, export n, press enter
+    inputs = iter([""] * 12 + ["n", ""])
+    monkeypatch.setattr("builtins.input", lambda *_: next(inputs, ""))
+
+    fake_df = pd.DataFrame({"year": [2021, 2022], "prevalence_rate": [1, 2]})
+    monkeypatch.setattr(
+        "dashboard_public_health.ui.cli.summary_menu.filter_records_with_connection",
+        lambda filters: fake_df,
+    )
+    # no-op plot
+    monkeypatch.setattr(
+        "dashboard_public_health.application.visualization.plot_descriptive",
+        lambda df: None,
+    )
+
+    smenu = SummaryMenu()
+    smenu.show_descriptive()
+    out = capsys.readouterr().out
+
+    assert "year" not in out
+    # export default should use filtered df, not table; ensure no file created
+    assert not (tmp_path / "descriptive.csv").exists()

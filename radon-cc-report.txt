@@ -1,0 +1,121 @@
+src/dashboard_public_health/__main__.py
+    F 6:0 main - A (1)
+src/dashboard_public_health/ui/cli/load_provenance.py
+    F 7:0 load_provenance_summary - A (5)
+src/dashboard_public_health/ui/cli/summary_menu.py
+    M 48:4 SummaryMenu._load_filtered_df - B (9)
+    M 74:4 SummaryMenu.show_descriptive - A (5)
+    C 23:0 SummaryMenu - A (4)
+    M 25:4 SummaryMenu.__init__ - A (2)
+    M 96:4 SummaryMenu.show_trends - A (2)
+    M 108:4 SummaryMenu.show_grouped_stats - A (2)
+    M 124:4 SummaryMenu.show_correlations - A (2)
+    M 141:4 SummaryMenu._maybe_export - A (2)
+    M 136:4 SummaryMenu.exit_menu - A (1)
+src/dashboard_public_health/ui/cli/crud_menu.py
+    M 81:4 CRUDMenu.update_record - B (7)
+    C 36:0 CRUDMenu - A (4)
+    M 48:4 CRUDMenu.create_record - A (4)
+    F 16:0 _read_int - A (3)
+    F 26:0 _read_float - A (3)
+    M 110:4 CRUDMenu.delete_record - A (3)
+    F 11:0 _read_str - A (2)
+    M 39:4 CRUDMenu.__init__ - A (1)
+    M 122:4 CRUDMenu.exit_menu - A (1)
+src/dashboard_public_health/ui/cli/main_menu.py
+    C 15:0 MainMenu - A (2)
+    M 16:4 MainMenu.__init__ - A (1)
+    M 32:4 MainMenu.ingest_data - A (1)
+    M 37:4 MainMenu.open_filter_menu - A (1)
+    M 41:4 MainMenu.open_summary_menu - A (1)
+    M 45:4 MainMenu.open_visualization_menu - A (1)
+    M 49:4 MainMenu.open_export_menu - A (1)
+    M 53:4 MainMenu.show_logs - A (1)
+    M 58:4 MainMenu.show_provenance - A (1)
+    M 64:4 MainMenu.open_crud_menu - A (1)
+    M 68:4 MainMenu.exit_menu - A (1)
+src/dashboard_public_health/ui/cli/export_menu.py
+    C 16:0 ExportMenu - A (3)
+    M 26:4 ExportMenu._load_df - A (3)
+    M 49:4 ExportMenu._export_df - A (3)
+    M 17:4 ExportMenu.__init__ - A (2)
+    M 45:4 ExportMenu._prompt_filename - A (2)
+    M 60:4 ExportMenu.export_csv - A (2)
+    M 69:4 ExportMenu.export_json - A (2)
+    M 41:4 ExportMenu._ensure_output_dir - A (1)
+    M 78:4 ExportMenu.exit_menu - A (1)
+src/dashboard_public_health/ui/cli/session.py
+    C 10:0 SessionContext - A (1)
+src/dashboard_public_health/ui/cli/__init__.py
+    F 4:0 run_cli - A (1)
+src/dashboard_public_health/ui/cli/router.py
+    M 10:4 Menu.run - B (7)
+    C 4:0 Menu - A (5)
+    M 5:4 Menu.__init__ - A (1)
+src/dashboard_public_health/ui/cli/helpers.py
+    F 11:0 collect_filters - A (5)
+    F 6:0 ask_filter_inputs - A (1)
+src/dashboard_public_health/ui/cli/filter_menu.py
+    M 30:4 FilterMenu.apply_filters - B (7)
+    C 12:0 FilterMenu - A (4)
+    M 18:4 FilterMenu.__init__ - A (2)
+    M 68:4 FilterMenu._maybe_export - A (2)
+    M 64:4 FilterMenu.exit_menu - A (1)
+src/dashboard_public_health/application/ingestion.py
+    F 16:0 dataframe_to_records - A (2)
+    F 25:0 ingest_from_csv - A (1)
+src/dashboard_public_health/application/clean.py
+    F 67:0 map_raw_to_internal_schema - A (5)
+    F 188:0 _handle_outliers - A (5)
+    F 236:0 _fill_missing_values - A (3)
+    F 260:0 _convert_types - A (3)
+    F 323:0 _deduplicate - A (3)
+    F 35:0 _normalise_columns - A (2)
+    F 302:0 _validate - A (1)
+    F 354:0 transform_raw_health_csv - A (1)
+src/dashboard_public_health/application/query.py
+    F 23:0 build_where_clause - C (11)
+    F 9:0 _normalize_filters - A (4)
+    F 84:0 filter_records_with_connection - A (3)
+src/dashboard_public_health/application/auto_mapper.py
+    F 4:0 auto_match_columns - A (5)
+src/dashboard_public_health/application/logger.py
+    F 5:0 read_last_logs - A (3)
+src/dashboard_public_health/application/visualization.py
+    F 42:0 plot_corr - A (3)
+    F 17:0 plot_time_trends - A (2)
+    F 5:0 plot_descriptive - A (1)
+    F 32:0 plot_grouped - A (1)
+src/dashboard_public_health/application/summary.py
+    F 81:0 correlation_summary - A (4)
+    F 31:0 time_trend_summary - A (3)
+    F 56:0 grouped_summary - A (3)
+    F 11:0 descriptive_summary - A (2)
+src/dashboard_public_health/application/provenance.py
+    F 14:0 _ensure_dir - A (1)
+    F 18:0 _write_jsonl - A (1)
+    F 24:0 _log_to_logger - A (1)
+    F 34:0 with_provenance - A (1)
+src/dashboard_public_health/infrastructure/db.py
+    F 159:0 get_record_by_id - B (6)
+    F 182:0 update_record_by_id - A (5)
+    F 142:0 insert_record - A (4)
+    F 23:0 init_db_schema - A (3)
+    F 204:0 delete_record_by_id - A (3)
+    F 70:0 insert_records - A (2)
+    F 14:0 get_conn - A (1)
+    F 220:0 drop_all_records - A (1)
+src/dashboard_public_health/infrastructure/csv_reader.py
+    F 6:0 load_csv - A (2)
+src/dashboard_public_health/infrastructure/logger.py
+    F 11:0 get_logger - A (2)
+    F 30:0 log_action - A (1)
+src/dashboard_public_health/domain/models.py
+    C 6:0 HealthRecord - A (2)
+    M 29:4 HealthRecord.from_dict - A (2)
+    M 54:4 HealthRecord.to_db_tuple - A (1)
+    M 81:4 HealthRecord.to_dict - A (1)
+    C 85:0 FilterCriteria - A (1)
+
+95 blocks (classes, functions, methods) analyzed.
+Average complexity: A (2.557894736842105)

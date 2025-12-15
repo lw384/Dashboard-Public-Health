@@ -9,6 +9,8 @@ from dashboard_public_health.infrastructure.db import (
     delete_record_by_id,
 )
 from dashboard_public_health.domain.models import HealthRecord
+from dashboard_public_health.infrastructure.logger import logger
+import logging
 
 
 # -------------------------------------------------------------
@@ -110,6 +112,35 @@ def test_insert_records_accepts_healthrecord(temp_db_path):
     conn.close()
 
     assert count == 1
+
+
+def test_insert_records_logs_duration(temp_db_path, monkeypatch):
+    conn = get_conn()
+    init_db_schema(conn)
+    logs = []
+
+    class ListHandler(logging.Handler):
+        def emit(self, record):
+            logs.append(record.getMessage())
+
+    handler = ListHandler()
+    logger.addHandler(handler)
+    monkeypatch.setattr(
+        "dashboard_public_health.infrastructure.db.perf_counter", lambda: 1.0
+    )
+
+    rec = {
+        "country": "UK",
+        "year": 2020,
+        "disease": "Flu",
+        "disease_category": "Infectious",
+    }
+
+    insert_records([rec], conn)
+    logger.removeHandler(handler)
+    conn.close()
+
+    assert any("insert_records" in m and "duration=" in m for m in logs)
 
 
 def test_crud_round_trip(temp_db_path):

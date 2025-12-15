@@ -39,10 +39,9 @@ def ingest_from_csv(csv_path: str) -> None:
 
     # 4. 建立数据库连接并初始化 schema
     conn = get_conn()
-    # clear all data
-    drop_all_records(conn)
-
     init_db_schema(conn)
+    # clear all data after schema exists
+    drop_all_records(conn)
 
     # 5. 插入数据（避免重复）
     insert_records(records, conn)

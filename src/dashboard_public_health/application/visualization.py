@@ -41,6 +41,10 @@ def plot_grouped(df, col):
 
 def plot_corr(df):
     numeric = df.select_dtypes(include="number")
+    # drop identifiers/time columns from correlation heatmap
+    for col in ["id", "year"]:
+        if col in numeric.columns:
+            numeric = numeric.drop(columns=[col])
     corr = numeric.corr()
     plt.figure(figsize=(10, 8))
     plt.imshow(corr, cmap="coolwarm")

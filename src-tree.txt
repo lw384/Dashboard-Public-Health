@@ -1,0 +1,33 @@
+src
+└── dashboard_public_health
+    ├── __main__.py
+    ├── application
+    │   ├── auto_mapper.py
+    │   ├── clean.py
+    │   ├── ingestion.py
+    │   ├── logger.py
+    │   ├── provenance.py
+    │   ├── query.py
+    │   ├── summary.py
+    │   └── visualization.py
+    ├── config.py
+    ├── domain
+    │   └── models.py
+    ├── infrastructure
+    │   ├── csv_reader.py
+    │   ├── db.py
+    │   └── logger.py
+    └── ui
+        └── cli
+            ├── __init__.py
+            ├── crud_menu.py
+            ├── export_menu.py
+            ├── filter_menu.py
+            ├── helpers.py
+            ├── load_provenance.py
+            ├── main_menu.py
+            ├── router.py
+            ├── session.py
+            └── summary_menu.py
+
+7 directories, 24 files

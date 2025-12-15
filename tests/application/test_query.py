@@ -10,6 +10,8 @@ from dashboard_public_health.application.query import (
 from dashboard_public_health.infrastructure.db import get_conn
 from dashboard_public_health.ui.cli.helpers import collect_filters
 from dashboard_public_health.domain.models import FilterCriteria
+from dashboard_public_health.infrastructure.logger import logger
+import logging
 
 
 # --------------------------------------------------------------
@@ -395,3 +397,22 @@ def test_filter_records_as_models(sample_db):
     assert len(records) == 1
     assert records[0].country == "France"
     assert records[0].disease == "COVID-19"
+
+
+def test_filter_logs_duration(sample_db, monkeypatch):
+    logs = []
+
+    class ListHandler(logging.Handler):
+        def emit(self, record):
+            logs.append(record.getMessage())
+
+    handler = ListHandler()
+    logger.addHandler(handler)
+    monkeypatch.setattr(
+        "dashboard_public_health.application.query.perf_counter", lambda: 1.0
+    )
+
+    filter_records_with_connection(country="Italy")
+    logger.removeHandler(handler)
+
+    assert any("filter_records_with_connection" in m and "duration=" in m for m in logs)

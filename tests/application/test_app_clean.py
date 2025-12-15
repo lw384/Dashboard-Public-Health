@@ -6,6 +6,8 @@ from dashboard_public_health.application.clean import (
     map_raw_to_internal_schema,
     transform_raw_health_csv,
 )
+from dashboard_public_health.infrastructure.logger import logger
+import logging
 
 
 # ----------------------------------------------------------
@@ -137,3 +139,22 @@ def test_validation_removes_missing_critical_fields(raw_df):
 
     # the third row had country=None → must be removed
     assert df_clean["country"].isna().sum() == 0
+
+
+def test_transform_logs_duration(raw_df, monkeypatch):
+    logs = []
+
+    class ListHandler(logging.Handler):
+        def emit(self, record):
+            logs.append(record.getMessage())
+
+    handler = ListHandler()
+    logger.addHandler(handler)
+
+    monkeypatch.setattr(
+        "dashboard_public_health.application.clean.perf_counter", lambda: 1.0
+    )
+    transform_raw_health_csv(raw_df)
+    logger.removeHandler(handler)
+
+    assert any("transform_raw_health_csv" in m and "duration=" in m for m in logs)

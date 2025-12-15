@@ -76,10 +76,19 @@ class SummaryMenu(Menu):
         if df is None:
             return
         numeric = df.select_dtypes(include="number")
-        table = numeric.describe().T.round(2)
-        table_df = table.reset_index().rename(columns={"index": "metric"})
-        print("\n=== Descriptive Summary (table) ===\n")
-        print(table.to_string())
+        # exclude id/year from summary calculation
+        for col in ["id", "year"]:
+            if col in numeric.columns:
+                numeric = numeric.drop(columns=[col])
+        if numeric.empty:
+            print("\n⚠ No numeric columns available for descriptive summary.\n")
+            table_df = pd.DataFrame()
+        else:
+            table = numeric.describe().T.round(2)
+            table_df = table.reset_index().rename(columns={"index": "metric"})
+            print("\n=== Descriptive Summary (table) ===\n")
+            print(table.to_string())
+        # export summary table
         self._maybe_export(table_df, default_name="descriptive.csv")
         input("\nPress Enter to continue...")
 

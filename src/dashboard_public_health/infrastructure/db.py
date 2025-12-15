@@ -7,6 +7,8 @@ import sqlite3
 from typing import Iterable, Dict, Any, Optional
 
 from dashboard_public_health import config
+from time import perf_counter
+from dashboard_public_health.infrastructure.logger import logger
 
 
 def get_conn() -> sqlite3.Connection:
@@ -73,6 +75,7 @@ def insert_records(records, conn):
     """
 
     cur = conn.cursor()
+    start = perf_counter()
 
     sql = """
         INSERT OR IGNORE INTO records (
@@ -131,6 +134,8 @@ def insert_records(records, conn):
     cur.executemany(sql, rows)
     conn.commit()
 
+    duration = perf_counter() - start
+    logger.info(f"[perf] insert_records duration={duration:.4f}s rows={cur.rowcount}")
     print(f"[db] Inserted {cur.rowcount} new rows (duplicates ignored).")
 
 

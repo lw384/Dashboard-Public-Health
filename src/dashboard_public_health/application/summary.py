@@ -1,6 +1,8 @@
 # src/dashboard_public_health/application/summary_service.py
 
 import pandas as pd
+from time import perf_counter
+from dashboard_public_health.infrastructure.logger import logger
 
 
 # -------------------------------------------------------------
@@ -8,6 +10,7 @@ import pandas as pd
 # -------------------------------------------------------------
 def descriptive_summary(df: pd.DataFrame) -> str:
     numeric = df.select_dtypes(include="number")
+    start = perf_counter()
 
     out = []
     out.append("📊 Basic Statistics\n")
@@ -17,6 +20,8 @@ def descriptive_summary(df: pd.DataFrame) -> str:
         out.append(
             f"- {col}: mean={row['mean']:.2f}, min={row['min']:.2f}, max={row['max']:.2f}"
         )
+    duration = perf_counter() - start
+    logger.info(f"[perf] descriptive_summary duration={duration:.4f}s")
     return "\n".join(out)
 
 
@@ -24,6 +29,7 @@ def descriptive_summary(df: pd.DataFrame) -> str:
 # 2. Time trends
 # -------------------------------------------------------------
 def time_trend_summary(df: pd.DataFrame) -> str:
+    start = perf_counter()
     if "year" not in df:
         return "⚠ No 'year' column available."
 
@@ -38,6 +44,9 @@ def time_trend_summary(df: pd.DataFrame) -> str:
             f"{year:<6} {row['prevalence_rate']:.2f}  {row['incidence_rate']:.2f}  {row['mortality_rate']:.2f}"
         )
 
+    duration = perf_counter() - start
+    logger.info(f"[perf] time_trend_summary duration={duration:.4f}s")
+
     return "\n".join(out)
 
 
@@ -45,6 +54,7 @@ def time_trend_summary(df: pd.DataFrame) -> str:
 # 3. Grouped stats
 # -------------------------------------------------------------
 def grouped_summary(df: pd.DataFrame, col: str) -> str:
+    start = perf_counter()
     if col not in df.columns:
         return f"⚠ Column '{col}' does not exist."
 
@@ -58,6 +68,9 @@ def grouped_summary(df: pd.DataFrame, col: str) -> str:
         out.append(
             f"{str(name):<15} {row['prevalence_rate']:.2f}  {row['incidence_rate']:.2f}  {row['mortality_rate']:.2f}"
         )
+
+    duration = perf_counter() - start
+    logger.info(f"[perf] grouped_summary duration={duration:.4f}s col={col}")
 
     return "\n".join(out)
 

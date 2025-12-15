@@ -1,8 +1,9 @@
 from typing import Dict, Any, Optional, List
 import pandas as pd
 from dashboard_public_health.infrastructure.db import get_conn
-from dashboard_public_health.infrastructure.logger import log_action
+from dashboard_public_health.infrastructure.logger import log_action, logger
 from dashboard_public_health.domain.models import FilterCriteria, HealthRecord
+from time import perf_counter
 
 
 def _normalize_filters(filters: Optional[FilterCriteria | Dict[str, Any]] = None, **kwargs):
@@ -102,7 +103,10 @@ def filter_records_with_connection(
         {where}
     """
 
+    start = perf_counter()
     df = pd.read_sql_query(query, conn, params=params)
+    duration = perf_counter() - start
+    logger.info(f"[perf] filter_records_with_connection duration={duration:.4f}s rows={len(df)}")
     if as_records:
         return [HealthRecord.from_dict(rec) for rec in df.to_dict(orient="records")]
     return df

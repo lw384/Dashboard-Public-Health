@@ -23,6 +23,8 @@ import numpy as np
 from dashboard_public_health.application.provenance import with_provenance
 from dashboard_public_health.application.auto_mapper import auto_match_columns
 from dashboard_public_health.infrastructure.logger import log_action
+from dashboard_public_health.infrastructure.logger import logger
+from time import perf_counter
 
 
 # ============================================================
@@ -38,10 +40,19 @@ def _normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
     - Replace whitespace with underscores
     - Replace "/" with "_"
     - Replace "%" with "percent"
+    - Remove parentheses
     """
     df = df.copy()
     df.columns = [
-        (c.strip().lower().replace(" ", "_").replace("/", "_").replace("%", "percent"))
+        (
+            c.strip()
+            .lower()
+            .replace(" ", "_")
+            .replace("/", "_")
+            .replace("%", "percent")
+            .replace("(", "")
+            .replace(")", "")
+        )
         for c in df.columns
     ]
     return df
@@ -359,11 +370,16 @@ def transform_raw_health_csv(
         - summary statistics
     """
 
+    start = perf_counter()
+
     df_internal = map_raw_to_internal_schema(df_raw, source_name=source_name)
     df_internal = _handle_outliers(df_internal)
     df_internal = _fill_missing_values(df_internal)
     df_internal = _convert_types(df_internal)
     df_clean = _validate(df_internal)
     df = _deduplicate(df_clean)
+
+    duration = perf_counter() - start
+    logger.info(f"[perf] transform_raw_health_csv duration={duration:.4f}s rows={len(df)}")
 
     return df

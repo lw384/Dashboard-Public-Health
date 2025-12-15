@@ -2,6 +2,7 @@
 
 import pandas as pd
 from pathlib import Path
+from time import perf_counter
 from dashboard_public_health.ui.cli.router import Menu
 from dashboard_public_health.ui.cli.helpers import collect_filters
 from dashboard_public_health.application.query import (
@@ -48,11 +49,13 @@ class ExportMenu(Menu):
     def _export_df(self, df: pd.DataFrame, filename: str, fmt: str):
         self._ensure_output_dir()
         path = OUTPUT_DIR / filename
+        start = perf_counter()
         if fmt == "csv":
             df.to_csv(path, index=False)
         elif fmt == "json":
             df.to_json(path, orient="records")
-        print(f"Saved to {path}")
+        duration = perf_counter() - start
+        print(f"Saved to {path} ({duration:.4f}s)")
 
     def export_csv(self):
         """Export filtered data to CSV"""
